@@ -284,28 +284,62 @@ export const getDefaultWeights = (): Record<string, number> => {
 // Helper function to get Excel column mappings (Excel header to criterion ID)
 export const getExcelColumnMappings = (): Record<string, string> => {
   return {
-    SicilNo: "driverId",
+    // Handle different variations of the main headers
+    "Sicil No": "driverId",
+    "SicilNo": "driverId",
+    "sicil no": "driverId",
     "Sefer Sayısı": "tripCount",
+    "sefer sayısı": "tripCount",
     "Yapılan Kilometre": "distance",
+    "yapılan kilometre": "distance",
+    
+    // Attendance criteria
     "Sağlık Sebebiyle Devamsızlık Durumu": "attendance",
+    "sağlık sebebiyle devamsızlık durumu": "attendance",
+    
+    // Overtime criteria
     "Normal Fazla Mesai": "normal_overtime",
+    "normal fazla mesai": "normal_overtime",
     "Hafta Tatili Mesaisi": "weekend_overtime",
+    "hafta tatili mesaisi": "weekend_overtime",
     "Resmi Tatil Mesaisi": "holiday_overtime",
+    "resmi tatil mesaisi": "holiday_overtime",
+    
+    // Accident criteria
     "Ölümle Sonuçlanan Kaza": "fatal_accident",
+    "ölümle sonuçlanan kaza": "fatal_accident",
     "Yaralanmalı Kaza": "injury_accident",
+    "yaralanmalı kaza": "injury_accident",
     "Maddi Hasarlı Kaza": "material_damage_accident",
-    "1. Derece İhlal": "first_degree_dismissal", // Old name, keep for compatibility
-    "2. Derece İhlal": "second_degree_dismissal", // Old name, keep for compatibility
-    "3. Derece İhlal": "third_degree_dismissal", // Old name, keep for compatibility
-    "4. Derece İhlal": "fourth_degree_dismissal", // Old name, keep for compatibility
+    "maddi hasarlı kaza": "material_damage_accident",
+    
+    // Discipline criteria - old format for compatibility
+    "1. Derece İhlal": "first_degree_dismissal",
+    "2. Derece İhlal": "second_degree_dismissal",
+    "3. Derece İhlal": "third_degree_dismissal",
+    "4. Derece İhlal": "fourth_degree_dismissal",
+    
+    // Discipline criteria - full format
     "1'nci Derece Disiplin İhlallerinden Sevk Sayısı Kilometreye Oranı": "first_degree_dismissal",
+    "1'inci Derece Disiplin İhlallerinden Sevk Sayısı Kilometreye Oranı": "first_degree_dismissal",
     "2'nci Derece Disiplin İhlallerinden Sevk Sayısı Kilometreye Oranı": "second_degree_dismissal",
+    "2'inci Derece Disiplin İhlallerinden Sevk Sayısı Kilometreye Oranı": "second_degree_dismissal",
     "3'ncü Derece Disiplin İhlallerinden Sevk Sayısı Kilometreye Oranı": "third_degree_dismissal",
+    "3'üncü Derece Disiplin İhlallerinden Sevk Sayısı Kilometreye Oranı": "third_degree_dismissal",
     "4'ncü Derece Disiplin İhlallerinden Sevk Sayısı Kilometreye Oranı": "fourth_degree_dismissal",
+    "4'üncü Derece Disiplin İhlallerinden Sevk Sayısı Kilometreye Oranı": "fourth_degree_dismissal",
+    
+    // Technical criteria
     "Hatalı Hızlanma Sayısı": "acceleration",
+    "hatalı hızlanma sayısı": "acceleration",
     "Hız İhlal Sayısı": "speed",
+    "hız ihlal sayısı": "speed",
     "Motor (KırmızıLamba) Uyarısı": "engine",
+    "Motor (Kırmızı Lamba) Uyarısı": "engine",
+    "Motor (kırmızı lamba) Uyarısı": "engine",
+    "motor (kırmızılamba) uyarısı": "engine",
     "Rölanti İhlal Sayısı": "idle",
+    "rölanti ihlal sayısı": "idle",
   }
 }
 

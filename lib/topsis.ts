@@ -39,6 +39,7 @@ export function calculateTOPSIS(
   // 1. Normalize the decision matrix
   const normalizedMatrix: Record<string, Record<string, number>> = {}
   const columnSumsOfSquares: Record<string, number> = {}
+  const EPSILON = 1e-10 // Small value to prevent division by zero
 
   // Calculate sum of squares for each criterion column
   for (const criterionId of criterionIds) {
@@ -46,6 +47,11 @@ export function calculateTOPSIS(
       const value = typeof driver[criterionId] === "number" ? (driver[criterionId] as number) : 0
       return sum + value * value
     }, 0)
+    
+    // Add epsilon to prevent zero division
+    if (columnSumsOfSquares[criterionId] === 0) {
+      columnSumsOfSquares[criterionId] = EPSILON
+    }
   }
 
   // Normalize each value
@@ -54,7 +60,7 @@ export function calculateTOPSIS(
     for (const criterionId of criterionIds) {
       const value = typeof driver[criterionId] === "number" ? (driver[criterionId] as number) : 0
       const divisor = Math.sqrt(columnSumsOfSquares[criterionId])
-      normalizedMatrix[driver.driverId][criterionId] = divisor === 0 ? 0 : value / divisor
+      normalizedMatrix[driver.driverId][criterionId] = value / divisor
     }
   }
 
@@ -134,7 +140,7 @@ export interface HierarchicalTOPSISResult {
   driverId: string
   closenessCoefficient: number
   rank: number
-  mainCriterionScores: Record<CriterionId, number> // Scores for each main criterion
+  mainCriterionScores: Record<string, number> // Scores for each main criterion
   overallScore: number
 }
 
@@ -184,12 +190,18 @@ export function calculateHierarchicalTOPSIS(
   // 1. Normalize the decision matrix (using vector normalization)
   const normalizedMatrix: Record<string, Record<string, number>> = {}
   const columnSumsOfSquares: Record<string, number> = {}
+  const EPSILON = 1e-10 // Small value to prevent division by zero
 
   for (const criterionId of leafCriterionIds) {
     columnSumsOfSquares[criterionId] = driversData.reduce((sum, driver) => {
       const value = typeof driver[criterionId] === "number" ? (driver[criterionId] as number) : 0
       return sum + value * value
     }, 0)
+    
+    // Add epsilon to prevent zero division
+    if (columnSumsOfSquares[criterionId] === 0) {
+      columnSumsOfSquares[criterionId] = EPSILON
+    }
   }
 
   for (const driver of driversData) {
@@ -197,7 +209,7 @@ export function calculateHierarchicalTOPSIS(
     for (const criterionId of leafCriterionIds) {
       const value = typeof driver[criterionId] === "number" ? (driver[criterionId] as number) : 0
       const divisor = Math.sqrt(columnSumsOfSquares[criterionId])
-      normalizedMatrix[driver.driverId][criterionId] = divisor === 0 ? 0 : value / divisor
+      normalizedMatrix[driver.driverId][criterionId] = value / divisor
     }
   }
 
@@ -235,7 +247,7 @@ export function calculateHierarchicalTOPSIS(
     const driverId = driver.driverId
     let distanceToPositive = 0
     let distanceToNegative = 0
-    const mainCriterionScores: Record<CriterionId, number> = {}
+    const mainCriterionScores: Record<string, number> = {}
 
     // Calculate scores for each main criterion based on its leaf children
     const mainCriteria = Object.values(criteriaHierarchy).filter((c) => c.level === 1)

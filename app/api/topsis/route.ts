@@ -209,14 +209,31 @@ export async function POST(request: NextRequest) {
       if (columnIndex !== -1) {
         console.log(`Found data for criterion "${criterion.name}" in column "${matchedHeader}" (index: ${columnIndex})`)
 
-        criteriaData[criterion.id] = filteredData.map((row) => {
+        criteriaData[criterion.id] = filteredData.map((row, rowIndex) => {
           const value = row[columnIndex]
-          // Handle comma as decimal separator
-          if (typeof value === "string" && value.includes(",")) {
-            return Number.parseFloat(value.replace(",", "."))
+          let numericValue = 0
+          
+          // Handle different value types and formats
+          if (typeof value === "string") {
+            // Handle comma as decimal separator and other string processing
+            const cleanValue = value.replace(",", ".").trim()
+            numericValue = Number.parseFloat(cleanValue) || 0
+          } else if (typeof value === "number") {
+            numericValue = value
           }
-          return Number.parseFloat(value) || 0 // Use 0 if NaN
+          
+          // Log first few values for debugging
+          if (rowIndex < 3) {
+            console.log(`  Row ${rowIndex}: "${value}" -> ${numericValue}`)
+          }
+          
+          return numericValue
         })
+        
+        // Log some statistics for this criterion
+        const values = criteriaData[criterion.id]
+        const nonZeroValues = values.filter(v => v !== 0)
+        console.log(`  Statistics: Total values: ${values.length}, Non-zero: ${nonZeroValues.length}, Min: ${Math.min(...values)}, Max: ${Math.max(...values)}`)
       } else {
         console.warn(`No data found for criterion "${criterion.name}" (id: ${criterion.id}). Using zeros.`)
         // Keep the initialized zeros for this criterion
