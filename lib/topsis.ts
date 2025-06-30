@@ -90,10 +90,31 @@ export function calculateTOPSIS(
     const values = driversData.map((driver) => weightedNormalizedMatrix[driver.driverId][criterionId])
 
     if (values.length > 0) {
-      idealPositive[criterionId] = isBenefit ? Math.max(...values) : Math.min(...values)
-      idealNegative[criterionId] = isBenefit ? Math.min(...values) : Math.max(...values)
+      const maxValue = Math.max(...values)
+      const minValue = Math.min(...values)
+      
+      // Log for debugging
+      console.log(`Criterion ${criterionId}: isBenefit=${isBenefit}, min=${minValue}, max=${maxValue}`)
+      
+      if (isBenefit) {
+        idealPositive[criterionId] = maxValue
+        idealNegative[criterionId] = minValue
+      } else {
+        idealPositive[criterionId] = minValue  
+        idealNegative[criterionId] = maxValue
+      }
+      
+      // Ensure we have different values for positive and negative ideals
+      if (idealPositive[criterionId] === idealNegative[criterionId]) {
+        // Add small perturbation to create difference
+        if (isBenefit) {
+          idealPositive[criterionId] += EPSILON
+        } else {
+          idealNegative[criterionId] += EPSILON
+        }
+      }
     } else {
-      idealPositive[criterionId] = 0
+      idealPositive[criterionId] = EPSILON
       idealNegative[criterionId] = 0
     }
   }
@@ -116,8 +137,20 @@ export function calculateTOPSIS(
     distanceToNegative = Math.sqrt(distanceToNegative)
 
     // 5. Calculate the relative closeness to the ideal solution (C*)
-    const closenessCoefficient =
-      distanceToPositive + distanceToNegative === 0 ? 0 : distanceToNegative / (distanceToPositive + distanceToNegative)
+    const totalDistance = distanceToPositive + distanceToNegative
+    let closenessCoefficient = 0
+    
+    if (totalDistance > EPSILON) {
+      closenessCoefficient = distanceToNegative / totalDistance
+    } else {
+      // If both distances are very small, use a small positive value
+      closenessCoefficient = 0.5
+    }
+    
+    // Debug logging for first few drivers
+    if (results.length < 3) {
+      console.log(`Driver ${driverId}: d+=${distanceToPositive.toFixed(6)}, d-=${distanceToNegative.toFixed(6)}, C*=${closenessCoefficient.toFixed(6)}`)
+    }
 
     results.push({
       driverId,

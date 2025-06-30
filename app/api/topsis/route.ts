@@ -157,11 +157,31 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`Processed ${driversData.length} drivers with ${leafCriteria.length} criteria`)
+    
+    // Log sample data for debugging
+    if (driversData.length > 0) {
+      console.log("Sample driver data (first driver):", driversData[0])
+      console.log("Global weights being used:", globalWeights)
+      
+      // Check for non-zero values
+      const firstDriver = driversData[0]
+      const nonZeroValues = Object.keys(firstDriver).filter(key => 
+        key !== 'driverId' && typeof firstDriver[key] === 'number' && firstDriver[key] !== 0
+      )
+      console.log("Non-zero values in first driver:", nonZeroValues)
+    }
 
     // Calculate TOPSIS
     const results = calculateTOPSIS(driversData, globalWeights)
 
     console.log(`TOPSIS completed. Results count: ${results.length}`)
+    
+    // Log sample results
+    if (results.length > 0) {
+      console.log("Sample TOPSIS result (first result):", results[0])
+      const nonZeroResults = results.filter(r => r.closenessCoefficient > 0)
+      console.log(`Results with non-zero coefficients: ${nonZeroResults.length}/${results.length}`)
+    }
 
     // Prepare response
     const filterInfo = {
