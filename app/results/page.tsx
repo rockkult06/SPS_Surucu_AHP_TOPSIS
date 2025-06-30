@@ -325,7 +325,12 @@ export default function AHPResultsPage({}: AHPResultsPageProps) {
                   <RechartsBarChart data={globalWeightsChartData} layout="vertical" margin={{ left: 100, right: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis type="number" dataKey="weight" />
-                    <YAxis type="category" dataKey="name" width={100} tickFormatter={(value) => value.split(" ")[0]} />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      width={100}
+                      tickFormatter={(value) => (typeof value === "string" ? value.split(" ")[0] : "")}
+                    />
                     <Tooltip content={<ChartTooltipContent />} />
                     <Bar dataKey="weight" fill="var(--color-weight)" radius={5} />
                   </RechartsBarChart>
