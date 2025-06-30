@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, Download, Info } from "lucide-react"
+import { AlertCircle, Download, Info, CheckCircle } from "lucide-react"
 import { motion } from "framer-motion"
 import * as XLSX from "xlsx"
 import jsPDF from "jspdf"
@@ -27,6 +27,8 @@ export default function TOPSISPage() {
   const [loading, setLoading] = useState(false)
   const [selectedCriteria, setSelectedCriteria] = useState<string[]>([])
   const [criteriaTypes, setCriteriaTypes] = useState<Record<string, boolean>>({}) // true for benefit, false for cost
+  const [useDefaultWeights, setUseDefaultWeights] = useState(false)
+  const [hasAhpWeights, setHasAhpWeights] = useState(false)
 
   const leafCriteria = useMemo(() => getLeafCriteria(), [])
   const excelColumnMappings = useMemo(() => getExcelColumnMappings(), [])
@@ -39,6 +41,7 @@ export default function TOPSISPage() {
         const parsedResults = JSON.parse(storedAhpResults)
         if (parsedResults.globalWeights) {
           setAhpWeights(parsedResults.globalWeights)
+          setHasAhpWeights(true)
           // Initialize selected criteria and types based on AHP weights
           const initialSelected = Object.keys(parsedResults.globalWeights)
           setSelectedCriteria(initialSelected)
@@ -48,15 +51,27 @@ export default function TOPSISPage() {
             initialTypes[id] = getCriteriaBenefitType(id) || false // Default to cost if not specified
           })
           setCriteriaTypes(initialTypes)
+          setError(null) // Clear any previous errors
         }
       } catch (e) {
         console.error("Error loading AHP weights from localStorage:", e)
         setError("AHP ağırlıkları yüklenirken bir hata oluştu.")
+        setHasAhpWeights(false)
       }
     } else {
-      setError("Lütfen önce AHP hesaplamasını tamamlayın.")
+      setHasAhpWeights(false)
+      // Initialize with all criteria for default weights option
+      const allCriteriaIds = leafCriteria.map(c => c.id)
+      setSelectedCriteria(allCriteriaIds)
+      
+      const initialTypes: Record<string, boolean> = {}
+      allCriteriaIds.forEach((id) => {
+        initialTypes[id] = getCriteriaBenefitType(id) || false
+      })
+      setCriteriaTypes(initialTypes)
+      setError("AHP değerlendirmesi bulunamadı. Varsayılan eşit ağırlıkları kullanabilirsiniz.")
     }
-  }, [])
+  }, [leafCriteria])
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -105,13 +120,13 @@ export default function TOPSISPage() {
     reader.readAsArrayBuffer(file)
   }
 
-  const handleCalculateTOPSIS = () => {
+  const handleCalculateTOPSIS = async () => {
     if (driversData.length === 0) {
       setError("Lütfen önce sürücü verilerini yükleyin.")
       return
     }
-    if (Object.keys(ahpWeights).length === 0) {
-      setError("AHP ağırlıkları yüklenemedi. Lütfen AHP hesaplamasını tamamlayın.")
+    if (!hasAhpWeights && !useDefaultWeights) {
+      setError("AHP ağırlıkları bulunamadı. Lütfen AHP değerlendirmesi yapın veya varsayılan ağırlıkları kullanın.")
       return
     }
     if (selectedCriteria.length === 0) {
@@ -123,26 +138,74 @@ export default function TOPSISPage() {
     setError(null)
 
     try {
-      // Filter weights and criteria types based on selected criteria
-      const filteredWeights: Record<string, number> = {}
-      const filteredDriversData = driversData.map((driver) => {
-        const newDriver: DriverData = {
-          driverId: driver.driverId,
-          tripCount: driver.tripCount,
-          distance: driver.distance,
-        }
-        selectedCriteria.forEach((criterionId) => {
-          filteredWeights[criterionId] = ahpWeights[criterionId] || 0
-          newDriver[criterionId] = driver[criterionId] || 0
+      let weightsToUse: Record<string, number> = {}
+      
+      if (useDefaultWeights || !hasAhpWeights) {
+        // Use equal weights for all selected criteria
+        const equalWeight = 1 / selectedCriteria.length
+        selectedCriteria.forEach(criterionId => {
+          weightsToUse[criterionId] = equalWeight
         })
-        return newDriver
+        console.log("Using default equal weights:", weightsToUse)
+      } else {
+        // Use AHP weights
+        selectedCriteria.forEach((criterionId) => {
+          weightsToUse[criterionId] = ahpWeights[criterionId] || 0
+        })
+        console.log("Using AHP weights:", weightsToUse)
+      }
+
+      // Create FormData for API call
+      const formData = new FormData()
+      
+      // Create a simple Excel file from driversData for API
+      const ws = XLSX.utils.json_to_sheet(driversData.map(driver => {
+        const row: any = {
+          "Sicil No": driver.driverId,
+          "Sefer Sayısı": driver.tripCount || 0,
+          "Yapılan Kilometre": driver.distance || 0
+        }
+        
+        // Add criterion values with proper headers
+        leafCriteria.forEach(criterion => {
+          row[criterion.name] = driver[criterion.id] || 0
+        })
+        
+        return row
+      }))
+      
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, "Veriler")
+      const excelBuffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+      const file = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      
+      formData.append('file', file, 'driver_data.xlsx')
+      formData.append('globalWeights', JSON.stringify(weightsToUse))
+      formData.append('minTripCount', '0')
+      formData.append('minDistance', '0')
+
+      const response = await fetch('/api/topsis', {
+        method: 'POST',
+        body: formData,
       })
 
-      const results = calculateTOPSIS(filteredDriversData, filteredWeights)
-      setTopsisResults(results)
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'TOPSIS hesaplaması başarısız')
+      }
+
+      const data = await response.json()
+      setTopsisResults(data.results || [])
+      
+      if (useDefaultWeights) {
+        console.log("TOPSIS hesaplaması varsayılan eşit ağırlıklarla tamamlandı")
+      } else {
+        console.log("TOPSIS hesaplaması AHP ağırlıklarıyla tamamlandı")
+      }
+      
     } catch (err) {
       console.error("Error calculating TOPSIS:", err)
-      setError("TOPSIS hesaplaması sırasında bir hata oluştu.")
+      setError(err instanceof Error ? err.message : "TOPSIS hesaplaması sırasında bir hata oluştu.")
     } finally {
       setLoading(false)
     }
@@ -229,9 +292,42 @@ export default function TOPSISPage() {
               <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               <AlertDescription className="text-blue-800 dark:text-blue-200">
                 TOPSIS analizi için sürücü verilerini içeren bir Excel dosyası yükleyin. Dosyanızın ilk satırında
-                'SicilNo', 'Sefer Sayısı', 'Yapılan Kilometre' ve diğer kriter başlıkları bulunmalıdır.
+                'Sicil No', 'Sefer Sayısı', 'Yapılan Kilometre' ve diğer kriter başlıkları bulunmalıdır.
               </AlertDescription>
             </Alert>
+
+            {!hasAhpWeights && (
+              <Alert className="mb-6 rounded-xl bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-900/30">
+                <Info className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <AlertDescription className="text-amber-800 dark:text-amber-200">
+                  <div className="space-y-3">
+                    <p>AHP değerlendirmesi bulunamadı. İki seçeneğiniz var:</p>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="use-default-weights"
+                        checked={useDefaultWeights}
+                        onCheckedChange={(checked) => setUseDefaultWeights(checked === true)}
+                      />
+                      <Label htmlFor="use-default-weights" className="cursor-pointer">
+                        <strong>Varsayılan Eşit Ağırlıkları Kullan</strong> - Tüm kriterler eşit önemde değerlendirilir ({(100 / leafCriteria.length).toFixed(1)}% her biri)
+                      </Label>
+                    </div>
+                    <p className="text-sm">
+                      Daha doğru sonuçlar için önce <strong>AHP değerlendirmesi</strong> yapmanız önerilir.
+                    </p>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {hasAhpWeights && (
+              <Alert className="mb-6 rounded-xl bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-900/30">
+                <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <AlertDescription className="text-green-800 dark:text-green-200">
+                  AHP değerlendirmesi başarıyla yüklendi. Kriter ağırlıkları hesaplanmış durumda.
+                </AlertDescription>
+              </Alert>
+            )}
 
             <div className="grid gap-4 mb-8">
               <Label htmlFor="data-upload">Sürücü Verilerini Yükle (Excel)</Label>

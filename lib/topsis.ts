@@ -7,6 +7,13 @@ export interface DriverPerformance {
   [criterionId: string]: number | string // Criterion values
 }
 
+export interface DriverData {
+  driverId: string
+  tripCount?: number
+  distance?: number
+  [criterionId: string]: number | string | undefined // Criterion values
+}
+
 export interface TOPSISResult {
   driverId: string
   normalizedPerformance: Record<string, number>
