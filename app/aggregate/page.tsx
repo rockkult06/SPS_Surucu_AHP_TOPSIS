@@ -112,7 +112,7 @@ export default function AggregateWeightsPage() {
     return null // Should not happen due to error handling above, but for type safety
   }
 
-  const sortedLeafWeights = Object.entries(ahpResults.leafCriteriaWeights)
+  const sortedLeafWeights = Object.entries(ahpResults.leafCriteriaWeights || {})
     .sort(([, weightA], [, weightB]) => weightB - weightA) // Sort by weight descending
     .map(([id, weight]) => ({
       id,
@@ -180,7 +180,7 @@ export default function AggregateWeightsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {Object.entries(ahpResults.consistencyRatios).map(([levelId, cr]) => {
+              {Object.entries(ahpResults.consistencyRatios || {}).map(([levelId, cr]) => {
                 const isConsistent = cr < 0.1
                 const levelName = criteriaHierarchy[levelId]?.name || "Ana Kriterler"
                 return (
