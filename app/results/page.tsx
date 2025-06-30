@@ -47,7 +47,7 @@ export default function AHPResultsPage({}: AHPResultsPageProps) {
     return Object.entries(ahpResults.globalWeights)
       .map(([id, weight]) => ({
         name: criteriaHierarchy[id as keyof typeof criteriaHierarchy]?.name || id,
-        weight: Number.parseFloat((weight * 100).toFixed(2)), // Convert to percentage
+        weight: Number.parseFloat(((weight as number) * 100).toFixed(2)), // Convert to percentage
       }))
       .sort((a, b) => b.weight - a.weight) // Sort by weight descending
   }, [ahpResults])
@@ -65,56 +65,33 @@ export default function AHPResultsPage({}: AHPResultsPageProps) {
     data.push(["Hesaplama Tarihi:", calculationDate])
     data.push([]) // Empty row for spacing
 
-    // Main Criteria Weights
-    data.push(["Ana Kriter Ağırlıkları"])
-    data.push(["Kriter", "Ağırlık (%)"])
-    ahpResults.mainWeights.forEach((weight, index) => {
-      const criterionId = ahpResults.mainCriteria.ids[index]
-      const criterionName = criteriaHierarchy[criterionId as keyof typeof criteriaHierarchy]?.name || criterionId
-      data.push([criterionName, (weight * 100).toFixed(2)])
-    })
-    data.push(["Tutarlılık Oranı (CR):", (ahpResults.mainCR * 100).toFixed(2) + "%"])
-    data.push(["Tutarlı mı?:", ahpResults.mainConsistent ? "Evet" : "Hayır"])
-    data.push([])
-
-    // Sub-Criteria Weights
-    data.push(["Alt Kriter Ağırlıkları"])
-    for (const parentId in ahpResults.subWeights) {
-      const parentName = criteriaHierarchy[parentId as keyof typeof criteriaHierarchy]?.name || parentId
-      data.push([`${parentName} Alt Kriterleri`])
-      data.push(["Kriter", "Ağırlık (%)"])
-      ahpResults.subWeights[parentId].forEach((weight, index) => {
-        const criterionId = ahpResults.subCriteria[parentId].ids[index]
-        const criterionName = criteriaHierarchy[criterionId as keyof typeof criteriaHierarchy]?.name || criterionId
-        data.push([criterionName, (weight * 100).toFixed(2)])
-      })
-      data.push(["Tutarlılık Oranı (CR):", (ahpResults.subCRs[parentId] * 100).toFixed(2) + "%"])
-      data.push(["Tutarlı mı?:", ahpResults.subConsistent[parentId] ? "Evet" : "Hayır"])
-      data.push([])
-    }
-
-    // Sub-Sub-Criteria Weights
-    data.push(["Alt-Alt Kriter Ağırlıkları"])
-    for (const parentId in ahpResults.subSubWeights) {
-      const parentName = criteriaHierarchy[parentId as keyof typeof criteriaHierarchy]?.name || parentId
-      data.push([`${parentName} Alt Kriterleri`])
-      data.push(["Kriter", "Ağırlık (%)"])
-      ahpResults.subSubWeights[parentId].forEach((weight, index) => {
-        const criterionId = ahpResults.subSubCriteria[parentId].ids[index]
-        const criterionName = criteriaHierarchy[criterionId as keyof typeof criteriaHierarchy]?.name || criterionId
-        data.push([criterionName, (weight * 100).toFixed(2)])
-      })
-      data.push(["Tutarlılık Oranı (CR):", (ahpResults.subSubCRs[parentId] * 100).toFixed(2) + "%"])
-      data.push(["Tutarlı mı?:", ahpResults.subSubConsistent[parentId] ? "Evet" : "Hayır"])
-      data.push([])
-    }
-
-    // Global Weights
+    // Global Weights (Ana sonuçlar)
     data.push(["Global Kriter Ağırlıkları"])
     data.push(["Kriter", "Ağırlık (%)"])
-    globalWeightsChartData.forEach((item) => {
+    globalWeightsChartData.forEach((item: { name: string; weight: number }) => {
       data.push([item.name, item.weight.toFixed(2)])
     })
+    data.push([])
+
+    // Consistency Info
+    data.push(["Tutarlılık Bilgisi"])
+    data.push(["Ana Kriterler CR:", (ahpResults.mainCR * 100).toFixed(2) + "%"])
+    data.push(["Ana Kriterler Tutarlı mı?:", ahpResults.mainConsistent ? "Evet" : "Hayır"])
+    
+    // Sub-criteria consistency
+    for (const parentId in ahpResults.subCRs) {
+      const parentName = criteriaHierarchy[parentId as keyof typeof criteriaHierarchy]?.name || parentId
+      data.push([`${parentName} CR:`, (ahpResults.subCRs[parentId] * 100).toFixed(2) + "%"])
+      data.push([`${parentName} Tutarlı mı?:`, ahpResults.subConsistent[parentId] ? "Evet" : "Hayır"])
+    }
+    
+    // Sub-sub-criteria consistency
+    for (const parentId in ahpResults.subSubCRs) {
+      const parentName = criteriaHierarchy[parentId as keyof typeof criteriaHierarchy]?.name || parentId
+      data.push([`${parentName} Alt-Alt CR:`, (ahpResults.subSubCRs[parentId] * 100).toFixed(2) + "%"])
+      data.push([`${parentName} Alt-Alt Tutarlı mı?:`, ahpResults.subSubConsistent[parentId] ? "Evet" : "Hayır"])
+    }
+    
     data.push(["Genel Tutarlılık:", ahpResults.isOverallConsistent ? "Evet" : "Hayır"])
 
     const ws = XLSX.utils.aoa_to_sheet(data)
@@ -138,88 +115,9 @@ export default function AHPResultsPage({}: AHPResultsPageProps) {
     doc.text(`Değerlendirmeyi Yapan: ${evaluatorName}`, 14, 32)
     doc.text(`Hesaplama Tarihi: ${calculationDate}`, 14, 39)
 
-    let yPos = 45
-
-    // Main Criteria
-    yPos += 10
-    doc.setFontSize(14)
-    doc.text("Ana Kriter Ağırlıkları", 14, yPos)
-    yPos += 7
-    doc.setFontSize(10)
-    doc.autoTable({
-      startY: yPos,
-      head: [["Kriter", "Ağırlık (%)"]],
-      body: ahpResults.mainWeights.map((weight, index) => {
-        const criterionId = ahpResults.mainCriteria.ids[index]
-        const criterionName = criteriaHierarchy[criterionId as keyof typeof criteriaHierarchy]?.name || criterionId
-        return [criterionName, (weight * 100).toFixed(2)]
-      }),
-      theme: "grid",
-      styles: { fontSize: 9, cellPadding: 2 },
-      headStyles: { fillColor: [23, 162, 184] },
-      margin: { left: 14, right: 14 },
-    })
-    yPos = (doc as any).lastAutoTable.finalY + 5
-    doc.text(`Tutarlılık Oranı (CR): ${(ahpResults.mainCR * 100).toFixed(2)}%`, 14, yPos)
-    yPos += 5
-    doc.text(`Tutarlı mı?: ${ahpResults.mainConsistent ? "Evet" : "Hayır"}`, 14, yPos)
-
-    // Sub-Criteria
-    for (const parentId in ahpResults.subWeights) {
-      yPos += 10
-      const parentName = criteriaHierarchy[parentId as keyof typeof criteriaHierarchy]?.name || parentId
-      doc.setFontSize(14)
-      doc.text(`${parentName} Alt Kriterleri`, 14, yPos)
-      yPos += 7
-      doc.setFontSize(10)
-      doc.autoTable({
-        startY: yPos,
-        head: [["Kriter", "Ağırlık (%)"]],
-        body: ahpResults.subWeights[parentId].map((weight, index) => {
-          const criterionId = ahpResults.subCriteria[parentId].ids[index]
-          const criterionName = criteriaHierarchy[criterionId as keyof typeof criteriaHierarchy]?.name || criterionId
-          return [criterionName, (weight * 100).toFixed(2)]
-        }),
-        theme: "grid",
-        styles: { fontSize: 9, cellPadding: 2 },
-        headStyles: { fillColor: [23, 162, 184] },
-        margin: { left: 14, right: 14 },
-      })
-      yPos = (doc as any).lastAutoTable.finalY + 5
-      doc.text(`Tutarlılık Oranı (CR): ${(ahpResults.subCRs[parentId] * 100).toFixed(2)}%`, 14, yPos)
-      yPos += 5
-      doc.text(`Tutarlı mı?: ${ahpResults.subConsistent[parentId] ? "Evet" : "Hayır"}`, 14, yPos)
-    }
-
-    // Sub-Sub-Criteria
-    for (const parentId in ahpResults.subSubWeights) {
-      yPos += 10
-      const parentName = criteriaHierarchy[parentId as keyof typeof criteriaHierarchy]?.name || parentId
-      doc.setFontSize(14)
-      doc.text(`${parentName} Alt-Alt Kriterleri`, 14, yPos)
-      yPos += 7
-      doc.setFontSize(10)
-      doc.autoTable({
-        startY: yPos,
-        head: [["Kriter", "Ağırlık (%)"]],
-        body: ahpResults.subSubWeights[parentId].map((weight, index) => {
-          const criterionId = ahpResults.subSubCriteria[parentId].ids[index]
-          const criterionName = criteriaHierarchy[criterionId as keyof typeof criteriaHierarchy]?.name || criterionId
-          return [criterionName, (weight * 100).toFixed(2)]
-        }),
-        theme: "grid",
-        styles: { fontSize: 9, cellPadding: 2 },
-        headStyles: { fillColor: [23, 162, 184] },
-        margin: { left: 14, right: 14 },
-      })
-      yPos = (doc as any).lastAutoTable.finalY + 5
-      doc.text(`Tutarlılık Oranı (CR): ${(ahpResults.subSubCRs[parentId] * 100).toFixed(2)}%`, 14, yPos)
-      yPos += 5
-      doc.text(`Tutarlı mı?: ${ahpResults.subSubConsistent[parentId] ? "Evet" : "Hayır"}`, 14, yPos)
-    }
+    let yPos = 50
 
     // Global Weights
-    yPos += 10
     doc.setFontSize(14)
     doc.text("Global Kriter Ağırlıkları", 14, yPos)
     yPos += 7
@@ -227,13 +125,42 @@ export default function AHPResultsPage({}: AHPResultsPageProps) {
     doc.autoTable({
       startY: yPos,
       head: [["Kriter", "Ağırlık (%)"]],
-      body: globalWeightsChartData.map((item) => [item.name, item.weight.toFixed(2)]),
+      body: globalWeightsChartData.map((item: { name: string; weight: number }) => [item.name, item.weight.toFixed(2)]),
       theme: "grid",
       styles: { fontSize: 9, cellPadding: 2 },
       headStyles: { fillColor: [23, 162, 184] },
       margin: { left: 14, right: 14 },
     })
-    yPos = (doc as any).lastAutoTable.finalY + 5
+    yPos = (doc as any).lastAutoTable.finalY + 10
+
+    // Consistency Information
+    doc.setFontSize(14)
+    doc.text("Tutarlılık Bilgisi", 14, yPos)
+    yPos += 10
+    doc.setFontSize(10)
+    doc.text(`Ana Kriterler CR: ${(ahpResults.mainCR * 100).toFixed(2)}%`, 14, yPos)
+    yPos += 5
+    doc.text(`Ana Kriterler Tutarlı mı?: ${ahpResults.mainConsistent ? "Evet" : "Hayır"}`, 14, yPos)
+    yPos += 5
+
+    // Sub-criteria consistency
+    for (const parentId in ahpResults.subCRs) {
+      const parentName = criteriaHierarchy[parentId as keyof typeof criteriaHierarchy]?.name || parentId
+      doc.text(`${parentName} CR: ${(ahpResults.subCRs[parentId] * 100).toFixed(2)}%`, 14, yPos)
+      yPos += 5
+      doc.text(`${parentName} Tutarlı mı?: ${ahpResults.subConsistent[parentId] ? "Evet" : "Hayır"}`, 14, yPos)
+      yPos += 5
+    }
+
+    // Sub-sub-criteria consistency  
+    for (const parentId in ahpResults.subSubCRs) {
+      const parentName = criteriaHierarchy[parentId as keyof typeof criteriaHierarchy]?.name || parentId
+      doc.text(`${parentName} Alt-Alt CR: ${(ahpResults.subSubCRs[parentId] * 100).toFixed(2)}%`, 14, yPos)
+      yPos += 5
+      doc.text(`${parentName} Alt-Alt Tutarlı mı?: ${ahpResults.subSubConsistent[parentId] ? "Evet" : "Hayır"}`, 14, yPos)
+      yPos += 5
+    }
+
     doc.text(`Genel Tutarlılık: ${ahpResults.isOverallConsistent ? "Evet" : "Hayır"}`, 14, yPos)
 
     doc.save("AHP_Sonuclari.pdf")
