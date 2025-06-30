@@ -312,7 +312,7 @@ export default function AHPResultsPage({}: AHPResultsPageProps) {
             </Table>
 
             <h3 className="text-xl font-semibold mb-4">Global Ağırlıkların Grafiği</h3>
-            <div className="h-[300px] w-full">
+            <div className="h-[400px] w-full mb-8">
               <ChartContainer
                 config={{
                   weight: {
@@ -338,7 +338,7 @@ export default function AHPResultsPage({}: AHPResultsPageProps) {
               </ChartContainer>
             </div>
           </CardContent>
-          <CardContent className="p-8 border-t flex flex-wrap gap-4 justify-center">
+          <CardContent className="p-8 border-t flex flex-wrap gap-4 justify-center mt-8">
             <Button onClick={exportToExcel} className="flex items-center gap-2">
               <Download className="h-4 w-4" /> Excel Olarak İndir
             </Button>
