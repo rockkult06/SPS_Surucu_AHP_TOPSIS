@@ -267,16 +267,73 @@ export default function TOPSISPage() {
       return
     }
 
-    const data = []
-    data.push(["Sürücü Sicil No", "Yakınlık Katsayısı", "Sıra"])
+    // 1. TOPSIS Sonuçları
+    const resultsData = [["Sıra", "Sürücü Sicil No", "Yakınlık Katsayısı (C*)", "TOPSIS Puanı"]]
     topsisResults.forEach((result) => {
-      data.push([result.driverId, result.closenessCoefficient.toFixed(4), result.rank])
+      resultsData.push([result.rank, result.driverId, result.closenessCoefficient.toFixed(4), (result.closenessCoefficient * 100).toFixed(2)])
     })
+    const wsResults = XLSX.utils.aoa_to_sheet(resultsData)
 
-    const ws = XLSX.utils.aoa_to_sheet(data)
+    // 2. Normalize Matris
+    const normalizeHeaders = ["Sürücü Sicil No", ...leafCriteria.map((c) => c.name)]
+    const normalizeData = [normalizeHeaders]
+    topsisResults.forEach((result) => {
+      const row = [result.driverId]
+      leafCriteria.forEach((c) => {
+        row.push(result.normalizedPerformance[c.id]?.toFixed(6) ?? "")
+      })
+      normalizeData.push(row)
+    })
+    const wsNormalize = XLSX.utils.aoa_to_sheet(normalizeData)
+
+    // 3. Ağırlıklı Normalize Matris
+    const weightedHeaders = ["Sürücü Sicil No", ...leafCriteria.map((c) => c.name)]
+    const weightedData = [weightedHeaders]
+    topsisResults.forEach((result) => {
+      const row = [result.driverId]
+      leafCriteria.forEach((c) => {
+        row.push(result.weightedNormalizedPerformance[c.id]?.toFixed(6) ?? "")
+      })
+      weightedData.push(row)
+    })
+    const wsWeighted = XLSX.utils.aoa_to_sheet(weightedData)
+
+    // 4. İdeal Çözümler
+    const idealHeaders = ["Kriter", "İdeal (A+)", "Anti-İdeal (A-)"]
+    const idealData = [idealHeaders]
+    if (topsisResults.length > 0) {
+      const first = topsisResults[0]
+      leafCriteria.forEach((c) => {
+        idealData.push([
+          c.name,
+          first.idealPositive[c.id]?.toFixed(6) ?? "",
+          first.idealNegative[c.id]?.toFixed(6) ?? "",
+        ])
+      })
+    }
+    const wsIdeal = XLSX.utils.aoa_to_sheet(idealData)
+
+    // 5. Uzaklıklar ve C*
+    const distHeaders = ["Sürücü Sicil No", "d+ (İdeal Uzaklık)", "d- (Anti-İdeal Uzaklık)", "Yakınlık Katsayısı (C*)"]
+    const distData = [distHeaders]
+    topsisResults.forEach((result) => {
+      distData.push([
+        result.driverId,
+        result.distanceToPositive.toFixed(6),
+        result.distanceToNegative.toFixed(6),
+        result.closenessCoefficient.toFixed(6),
+      ])
+    })
+    const wsDist = XLSX.utils.aoa_to_sheet(distData)
+
+    // Kitap oluştur ve sheet'leri ekle
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "TOPSIS Sonuçları")
-    XLSX.writeFile(wb, "TOPSIS_Sonuclari.xlsx")
+    XLSX.utils.book_append_sheet(wb, wsResults, "TOPSIS Sonuçları")
+    XLSX.utils.book_append_sheet(wb, wsNormalize, "Normalize Matris")
+    XLSX.utils.book_append_sheet(wb, wsWeighted, "Ağırlıklı Normalize")
+    XLSX.utils.book_append_sheet(wb, wsIdeal, "İdeal Çözümler")
+    XLSX.utils.book_append_sheet(wb, wsDist, "Uzaklıklar ve C*")
+    XLSX.writeFile(wb, "TOPSIS_Tum_Asamalar.xlsx")
   }
 
   const exportTopsisToPDF = () => {
@@ -292,8 +349,8 @@ export default function TOPSISPage() {
     doc.setFontSize(12)
     doc.autoTable({
       startY: 30,
-      head: [["Sürücü Sicil No", "Yakınlık Katsayısı", "Sıra"]],
-      body: topsisResults.map((result) => [result.driverId, result.closenessCoefficient.toFixed(4), result.rank]),
+      head: [["Sürücü Sicil No", "Yakınlık Katsayısı", "TOPSIS Puanı", "Sıra"]],
+      body: topsisResults.map((result) => [result.driverId, result.closenessCoefficient.toFixed(4), (result.closenessCoefficient * 100).toFixed(2), result.rank]),
       theme: "grid",
       styles: { fontSize: 9, cellPadding: 2 },
       headStyles: { fillColor: [23, 162, 184] },
@@ -483,6 +540,7 @@ export default function TOPSISPage() {
                       <TableHead>Sıra</TableHead>
                       <TableHead>Sürücü Sicil No</TableHead>
                       <TableHead className="text-right">Yakınlık Katsayısı (C*)</TableHead>
+                      <TableHead className="text-right">TOPSIS Puanı</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -491,6 +549,7 @@ export default function TOPSISPage() {
                         <TableCell className="font-medium">{result.rank}</TableCell>
                         <TableCell>{result.driverId}</TableCell>
                         <TableCell className="text-right">{result.closenessCoefficient.toFixed(4)}</TableCell>
+                        <TableCell className="text-right">{(result.closenessCoefficient * 100).toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
