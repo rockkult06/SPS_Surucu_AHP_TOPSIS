@@ -58,6 +58,7 @@ export default function AllResultsPage() {
     if (storedTopsis) {
       try {
         const parsed = JSON.parse(storedTopsis)
+        // Eğer dizi değilse diziye çevir
         setTopsisResults(Array.isArray(parsed) ? parsed : [parsed])
       } catch (e) {
         console.error("Error parsing TOPSIS results from localStorage:", e)
@@ -158,9 +159,14 @@ export default function AllResultsPage() {
     data.push([])
 
     data.push(["TOPSIS Sıralaması"])
-    data.push(["Sıra", "Sürücü Sicil No", "Yakınlık Katsayısı"])
+    data.push(["Sıra", "Sürücü Sicil No", "Yakınlık Katsayısı", "TOPSIS Puanı"])
     result.topsisResults.forEach((topsisRes) => {
-      data.push([topsisRes.rank, topsisRes.driverId, topsisRes.closenessCoefficient.toFixed(4)])
+      data.push([
+        topsisRes.rank,
+        topsisRes.driverId,
+        topsisRes.closenessCoefficient.toFixed(4),
+        (topsisRes.closenessCoefficient * 100).toFixed(2),
+      ])
     })
 
     const ws = XLSX.utils.aoa_to_sheet(data)

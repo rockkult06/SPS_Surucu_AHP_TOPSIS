@@ -242,6 +242,27 @@ export default function TOPSISPage() {
         console.log("TOPSIS hesaplaması AHP ağırlıklarıyla tamamlandı")
       }
       
+      // Sonuçları localStorage'a kaydet
+      try {
+        const storedAhpResults = localStorage.getItem("ahpResults")
+        let evaluatorName = "Bilinmiyor"
+        if (storedAhpResults) {
+          try {
+            const parsed = JSON.parse(storedAhpResults)
+            evaluatorName = parsed.evaluatorName || "Bilinmiyor"
+          } catch {}
+        }
+        const topsisToStore = {
+          driversData,
+          topsisResults: data.results || [],
+          evaluatorName,
+          date: new Date().toISOString(),
+        }
+        localStorage.setItem("topsisResults", JSON.stringify([topsisToStore]))
+      } catch (e) {
+        console.error("TOPSIS sonucu kaydedilemedi:", e)
+      }
+      
     } catch (err) {
       console.error("Error calculating TOPSIS:", err)
       setError(err instanceof Error ? err.message : "TOPSIS hesaplaması sırasında bir hata oluştu.")
