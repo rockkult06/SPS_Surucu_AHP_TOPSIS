@@ -1,4 +1,4 @@
-"export type CriterionId =
+export type CriterionId =
   | "admin"
   | "technical"
   | "attendance"
