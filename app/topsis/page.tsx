@@ -250,21 +250,9 @@ export default function TOPSISPage() {
       
       // Sonuçları localStorage'a kaydet
       try {
-        const storedAhpResults = localStorage.getItem("ahpResults")
-        let evaluatorName = "Bilinmiyor"
-        if (storedAhpResults) {
-          try {
-            const parsed = JSON.parse(storedAhpResults)
-            evaluatorName = parsed.evaluatorName || "Bilinmiyor"
-          } catch {}
-        }
-        const topsisToStore = {
-          driversData,
-          topsisResults: data.results || [],
-          evaluatorName,
-          date: new Date().toISOString(),
-        }
-        localStorage.setItem("topsisResults", JSON.stringify(topsisToStore))
+        console.log("TOPSIS kaydedilecek veri:", data.results);
+        localStorage.setItem("topsisResults", JSON.stringify(data.results))
+        console.log("localStorage sonrası:", JSON.parse(localStorage.getItem("topsisResults")));
       } catch (e) {
         console.error("TOPSIS sonucu kaydedilemedi:", e)
       }
