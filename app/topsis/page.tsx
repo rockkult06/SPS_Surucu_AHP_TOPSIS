@@ -18,6 +18,7 @@ import { getLeafCriteria, getExcelColumnMappings, getCriteriaBenefitType } from 
 import { calculateTOPSIS, type DriverData, type TOPSISResult } from "@/lib/topsis"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
 
 export default function TOPSISPage() {
   const [driversData, setDriversData] = useState<DriverData[]>([])
@@ -30,6 +31,7 @@ export default function TOPSISPage() {
   const [useDefaultWeights, setUseDefaultWeights] = useState(false)
   const [hasAhpWeights, setHasAhpWeights] = useState(false)
   const [selectedFileName, setSelectedFileName] = useState("")
+  const { toast } = useToast()
 
   const leafCriteria = useMemo(() => getLeafCriteria(), [])
   const excelColumnMappings = useMemo(() => getExcelColumnMappings(), [])
@@ -264,7 +266,11 @@ export default function TOPSISPage() {
       } catch (e) {
         console.error("TOPSIS sonucu kaydedilemedi:", e)
       }
-      
+      // Başarılı bildirim
+      toast({
+        title: "TOPSIS Analizi Başarıyla tamamlandı.",
+        description: "Toplu Sonuçlar sayfasından kontrol ediniz.",
+      })
     } catch (err) {
       console.error("Error calculating TOPSIS:", err)
       setError(err instanceof Error ? err.message : "TOPSIS hesaplaması sırasında bir hata oluştu.")

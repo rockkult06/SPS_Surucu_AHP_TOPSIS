@@ -176,6 +176,41 @@ export default function AllResultsPage() {
           </CardContent>
         </Card>
       </div>
+      {/* En Yüksek ve En Düşük Puan Alanlar Kartları */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>En Yüksek Puan Alanlar</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1">
+              {filteredSortedResults.slice(0, 3).map((row, i) => (
+                <li key={row.driverId} className="flex items-center justify-between text-sm">
+                  <span className="font-semibold">{row.rank}.</span>
+                  <span className="mx-2">{row.driverId}</span>
+                  <span className="text-blue-700 font-bold">{row.closenessCoefficient.toFixed(3)}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>En Düşük Puan Alanlar</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1">
+              {filteredSortedResults.slice(-3).map((row, i) => (
+                <li key={row.driverId} className="flex items-center justify-between text-sm">
+                  <span className="font-semibold">{row.rank}.</span>
+                  <span className="mx-2">{row.driverId}</span>
+                  <span className="text-red-700 font-bold">{row.closenessCoefficient.toFixed(3)}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
       {/* Tam genişlikte, sıralanabilir ve filtrelenebilir tablo */}
       <div className="overflow-x-auto">
         <Table>
