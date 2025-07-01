@@ -250,8 +250,14 @@ export default function TOPSISPage() {
       
       // Sonuçları localStorage'a kaydet
       try {
-        console.log("TOPSIS kaydedilecek veri:", data.results);
-        localStorage.setItem("topsisResults", JSON.stringify(data.results))
+        // Sadece özet veri kaydet
+        const summaryResults = (data.results || []).map((r: any) => ({
+          driverId: r.driverId,
+          closenessCoefficient: r.closenessCoefficient,
+          rank: r.rank
+        }))
+        console.log("TOPSIS kaydedilecek özet veri:", summaryResults);
+        localStorage.setItem("topsisResults", JSON.stringify({ topsisResults: summaryResults }))
         console.log("localStorage sonrası:", JSON.parse(localStorage.getItem("topsisResults")));
       } catch (e) {
         console.error("TOPSIS sonucu kaydedilemedi:", e)
