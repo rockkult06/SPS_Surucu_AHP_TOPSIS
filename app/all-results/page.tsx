@@ -144,15 +144,12 @@ export default function AllResultsPage() {
     
     // 1. TOPSIS Sonuçları
     const resultsData = [
-      ["Sicil No", ...criteria.map(c => c.name), "TOPSIS Puani (C*)", "Siralama"]
+      ["Sicil No", ...criteria.map(c => c.name), "TOPSIS Puanı (C*)", "Sıralama"]
     ]
     filteredSortedResults.forEach(row => {
       const rowData = [
         row.driverId,
-        ...criteria.map(c => {
-          const value = row.normalizedPerformance?.[c.id]
-          return value !== undefined ? value.toFixed(6) : "-"
-        }),
+        ...criteria.map(c => row.normalizedPerformance?.[c.id]?.toFixed(3) ?? "-"),
         row.closenessCoefficient.toFixed(3),
         row.rank.toString()
       ]
@@ -180,17 +177,14 @@ export default function AllResultsPage() {
       } catch {}
     }
     const wsAhp = XLSX.utils.aoa_to_sheet(ahpData)
-    XLSX.utils.book_append_sheet(wb, wsAhp, "AHP_Kriter_Agırlıkları")
+    XLSX.utils.book_append_sheet(wb, wsAhp, "AHP_Kriter_Agirliklari")
 
     // 3. Normalize Matris
     const normalizeData = [["Sicil No", ...criteria.map(c => c.name)]]
     filteredSortedResults.forEach(row => {
       const rowData = [
         row.driverId,
-        ...criteria.map(c => {
-          const value = row.normalizedPerformance?.[c.id]
-          return value !== undefined ? value.toFixed(6) : "0"
-        })
+        ...criteria.map(c => row.normalizedPerformance?.[c.id]?.toFixed(6) ?? "0")
       ]
       normalizeData.push(rowData)
     })
@@ -202,10 +196,7 @@ export default function AllResultsPage() {
     filteredSortedResults.forEach(row => {
       const rowData = [
         row.driverId,
-        ...criteria.map(c => {
-          const value = row.weightedNormalizedPerformance?.[c.id]
-          return value !== undefined ? value.toFixed(6) : "0"
-        })
+        ...criteria.map(c => row.weightedNormalizedPerformance?.[c.id]?.toFixed(6) ?? "0")
       ]
       weightedData.push(rowData)
     })
@@ -213,7 +204,7 @@ export default function AllResultsPage() {
     XLSX.utils.book_append_sheet(wb, wsWeighted, "Agirlikli_Normalize")
 
     // 5. İdeal Çözümler
-    const idealData = [["Kriter", "Ideal Pozitif (A+)", "Ideal Negatif (A-)"]]
+    const idealData = [["Kriter", "İdeal Pozitif (A+)", "İdeal Negatif (A-)"]]
     if (filteredSortedResults.length > 0) {
       const firstResult = filteredSortedResults[0]
       criteria.forEach(c => {
@@ -228,7 +219,7 @@ export default function AllResultsPage() {
     XLSX.utils.book_append_sheet(wb, wsIdeal, "Ideal_Cozumler")
 
     // 6. Uzaklıklar ve C* Hesaplaması
-    const distanceData = [["Sicil No", "d+ (Ideal Uzaklik)", "d- (Anti-Ideal Uzaklik)", "Yakinlik Katsayisi (C*)"]]
+    const distanceData = [["Sicil No", "d+ (İdeal Uzaklık)", "d- (Anti-İdeal Uzaklık)", "Yakınlık Katsayısı (C*)"]]
     filteredSortedResults.forEach(row => {
       distanceData.push([
         row.driverId,
