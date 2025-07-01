@@ -153,13 +153,31 @@ export default function AllResultsPage() {
   }
 
   const exportTopsisToExcel = (result: StoredTOPSISResult) => {
+    // 0. Genel Bilgiler
+    const infoData = [
+      ["TOPSIS Hesaplama Raporu"],
+      [],
+      ["Değerlendirmeyi Yapan:", result.evaluatorName],
+      ["Hesaplama Tarihi:", new Date(result.date).toLocaleString()],
+      ["Toplam Sürücü Sayısı:", result.topsisResults.length.toString()],
+      [],
+      ["Rapor İçeriği:"],
+      ["1. TOPSIS Sonuçları - Sıralama ve yakınlık katsayıları"],
+      ["2. Normalize Matris - Normalize edilmiş performans değerleri"],
+      ["3. Ağırlıklı Normalize - Ağırlıklı normalize edilmiş değerler"],
+      ["4. İdeal Çözümler - İdeal pozitif ve negatif çözümler"],
+      ["5. Uzaklıklar ve C* - Uzaklık hesaplamaları ve yakınlık katsayıları"],
+      ["6. Ham Veri - Orijinal sürücü performans verileri"]
+    ]
+    const wsInfo = XLSX.utils.aoa_to_sheet(infoData)
+
     // 1. TOPSIS Sonuçları
-    const resultsData = [["Sıra", "Sürücü Sicil No", "Yakınlık Katsayısı (C*)", "TOPSIS Puanı"]]
+    const resultsData = [["Sıra", "Sürücü Sicil No", "Yakınlık Katsayısı (C*)", "TOPSIS Puanı (%)"]]
     result.topsisResults.forEach((topsisRes) => {
       resultsData.push([
         topsisRes.rank,
         topsisRes.driverId,
-        topsisRes.closenessCoefficient.toFixed(4),
+        topsisRes.closenessCoefficient.toFixed(6),
         (topsisRes.closenessCoefficient * 100).toFixed(2),
       ])
     })
@@ -218,13 +236,28 @@ export default function AllResultsPage() {
     })
     const wsDist = XLSX.utils.aoa_to_sheet(distData)
 
+    // 6. Ham Veri (Orijinal performans verileri)
+    const rawHeaders = ["Sürücü Sicil No", ...leafCriteria]
+    const rawData = [rawHeaders]
+    result.driversData.forEach((driver) => {
+      const row = [driver.driverId]
+      leafCriteria.forEach((c) => {
+        const value = driver[c]
+        row.push(typeof value === "number" ? value.toFixed(2) : value || "")
+      })
+      rawData.push(row)
+    })
+    const wsRaw = XLSX.utils.aoa_to_sheet(rawData)
+
     // Kitap oluştur ve sheet'leri ekle
     const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, wsInfo, "Genel Bilgiler")
     XLSX.utils.book_append_sheet(wb, wsResults, "TOPSIS Sonuçları")
     XLSX.utils.book_append_sheet(wb, wsNormalize, "Normalize Matris")
     XLSX.utils.book_append_sheet(wb, wsWeighted, "Ağırlıklı Normalize")
     XLSX.utils.book_append_sheet(wb, wsIdeal, "İdeal Çözümler")
     XLSX.utils.book_append_sheet(wb, wsDist, "Uzaklıklar ve C*")
+    XLSX.utils.book_append_sheet(wb, wsRaw, "Ham Veri")
     XLSX.writeFile(wb, `TOPSIS_Tum_Asamalar_${result.evaluatorName}_${new Date(result.date).toLocaleDateString()}.xlsx`)
   }
 
