@@ -69,9 +69,7 @@ export default function AllResultsPage() {
       const stored = localStorage.getItem("topsisResults")
       if (stored) {
         try {
-          const parsed = JSON.parse(stored)
-          // Son kaydı al (veya birleştir)
-          const last = Array.isArray(parsed) ? parsed[parsed.length-1] : parsed
+          const last = JSON.parse(stored)
           if (last && last.topsisResults) {
             setTopsisResults(last.topsisResults)
             // KPI hesapla

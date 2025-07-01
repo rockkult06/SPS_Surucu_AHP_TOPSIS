@@ -19,6 +19,7 @@ import { calculateTOPSIS, type DriverData, type TOPSISResult } from "@/lib/topsi
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
+import { useRouter } from 'next/navigation'
 
 export default function TOPSISPage() {
   const [driversData, setDriversData] = useState<DriverData[]>([])
@@ -32,6 +33,7 @@ export default function TOPSISPage() {
   const [hasAhpWeights, setHasAhpWeights] = useState(false)
   const [selectedFileName, setSelectedFileName] = useState("")
   const { toast } = useToast()
+  const router = useRouter()
 
   const leafCriteria = useMemo(() => getLeafCriteria(), [])
   const excelColumnMappings = useMemo(() => getExcelColumnMappings(), [])
@@ -262,15 +264,16 @@ export default function TOPSISPage() {
           evaluatorName,
           date: new Date().toISOString(),
         }
-        localStorage.setItem("topsisResults", JSON.stringify([topsisToStore]))
+        localStorage.setItem("topsisResults", JSON.stringify(topsisToStore))
       } catch (e) {
         console.error("TOPSIS sonucu kaydedilemedi:", e)
       }
-      // Başarılı bildirim
+      // Başarılı bildirim ve yönlendirme
       toast({
         title: "TOPSIS Analizi Başarıyla tamamlandı.",
         description: "Toplu Sonuçlar sayfasından kontrol ediniz.",
       })
+      router.push('/all-results')
     } catch (err) {
       console.error("Error calculating TOPSIS:", err)
       setError(err instanceof Error ? err.message : "TOPSIS hesaplaması sırasında bir hata oluştu.")
