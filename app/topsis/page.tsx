@@ -78,10 +78,23 @@ export default function TOPSISPage() {
     }
   }, [leafCriteria])
 
-  // Yeni veri yüklemeden önce localStorage'ı temizle
-  localStorage.removeItem("topsisResults");
+  // Tarayıcı ortamında localStorage'ı kontrol et
+  if (typeof window !== 'undefined') {
+    // Yeni veri yüklemeden önce localStorage'ı temizle
+    localStorage.removeItem("topsisResults");
 
-  // Veri yükleme ve işleme sürecini optimize et
+    // localStorage'dan alınan veriyi kontrol et
+    const storedResults = localStorage.getItem("topsisResults");
+    if (storedResults) {
+      try {
+        const parsedResults = JSON.parse(storedResults);
+        console.log("localStorage sonrası:", parsedResults);
+      } catch (e) {
+        console.error("localStorage verisi okunamadı:", e);
+      }
+    }
+  }
+
   const handleFileUpload = async (file: File) => {
     try {
       const buffer = await file.arrayBuffer();
@@ -97,17 +110,6 @@ export default function TOPSISPage() {
       console.error("Veri yükleme hatası:", error);
     }
   };
-
-  // localStorage'dan alınan veriyi kontrol et
-  const storedResults = localStorage.getItem("topsisResults");
-  if (storedResults) {
-    try {
-      const parsedResults = JSON.parse(storedResults);
-      console.log("localStorage sonrası:", parsedResults);
-    } catch (e) {
-      console.error("localStorage verisi okunamadı:", e);
-    }
-  }
 
   const handleCalculateTOPSIS = async () => {
     if (driversData.length === 0) {
