@@ -34,6 +34,31 @@ export default function AllResultsPage() {
   // Histogram için
   const [histogramData, setHistogramData] = useState<{labels: string[], counts: number[]}>({labels: [], counts: []})
 
+  // Sıralama ve filtreleme için state
+  const [sortBy, setSortBy] = useState<string>("rank")
+  const [sortOrder, setSortOrder] = useState<"asc"|"desc">("asc")
+  const [filters, setFilters] = useState<Record<string, string>>({})
+
+  // Sıralama ve filtreleme uygulanmış tablo verisi
+  const filteredSortedResults = useMemo(() => {
+    let data = [...topsisResults]
+    // Filtre uygula
+    Object.entries(filters).forEach(([key, val]) => {
+      if (val) {
+        data = data.filter(row => (row.normalizedPerformance?.[key]?.toString() ?? "").includes(val))
+      }
+    })
+    // Sıralama uygula
+    if (sortBy === "rank" || sortBy === "closenessCoefficient") {
+      data.sort((a, b) => sortOrder === "asc" ? a[sortBy] - b[sortBy] : b[sortBy] - a[sortBy])
+    } else {
+      data.sort((a, b) => sortOrder === "asc"
+        ? (a.normalizedPerformance?.[sortBy] ?? 0) - (b.normalizedPerformance?.[sortBy] ?? 0)
+        : (b.normalizedPerformance?.[sortBy] ?? 0) - (a.normalizedPerformance?.[sortBy] ?? 0))
+    }
+    return data
+  }, [topsisResults, sortBy, sortOrder, filters])
+
   useEffect(() => {
     // Kriterleri çek
     const leaf = getLeafCriteria()
@@ -127,90 +152,91 @@ export default function AllResultsPage() {
           </CardContent>
         </Card>
       </div>
-      {/* Ana Tablo ve Sağ Panel */}
-      <div className="flex flex-col md:flex-row gap-8">
-        <div className="flex-1 overflow-x-auto max-h-[600px]" onScroll={handleScroll}>
-          {/* Akıllı Tablo: Sürücülerin kriter puanları ve TOPSIS puanı */}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Sicil No</TableHead>
-                {criteria.map(c => <TableHead key={c.id}>{c.name}</TableHead>)}
-                <TableHead>TOPSIS Puanı (C*)</TableHead>
-                <TableHead>Sıralama</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {topsisResults.slice(0, visibleCount).map((row, i) => (
-                <TableRow key={row.driverId}>
-                  <TableCell>{row.driverId}</TableCell>
-                  {criteria.map(c => <TableCell key={c.id}>{row.normalizedPerformance?.[c.id]?.toFixed(2) ?? '-'}</TableCell>)}
-                  <TableCell>{row.closenessCoefficient.toFixed(3)}</TableCell>
-                  <TableCell>{row.rank}</TableCell>
-                </TableRow>
+      {/* Kriter Bazlı İstatistikler Grafiği */}
+      <div className="mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Kriter Bazlı Ortalama Değerler</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {criteriaStats.length > 0 ? (
+              <Bar
+                data={{
+                  labels: criteriaStats.map(s => s.name.length > 18 ? s.name.slice(0,18)+"..." : s.name),
+                  datasets: [
+                    { label: "Ortalama", data: criteriaStats.map(s => s.avg), backgroundColor: "#3b82f6" },
+                  ]
+                }}
+                options={{
+                  indexAxis: 'y',
+                  responsive: true,
+                  plugins: { legend: { display: false }, title: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x.toFixed(2)}` } } },
+                  scales: { y: { ticks: { autoSkip: false, font: { size: 10 } } } }
+                }}
+                height={320}
+              />
+            ) : (
+              <span className="text-muted-foreground">Grafik ve özetler burada olacak</span>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      {/* Tam genişlikte, sıralanabilir ve filtrelenebilir tablo */}
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Sicil No</TableHead>
+              {criteria.map(c => (
+                <TableHead key={c.id} className="cursor-pointer" onClick={() => {
+                  setSortBy(c.id)
+                  setSortOrder(o => (sortBy === c.id && o === "asc") ? "desc" : "asc")
+                }}>
+                  {c.name}
+                  {sortBy === c.id ? (sortOrder === "asc" ? " ▲" : " ▼") : ""}
+                </TableHead>
               ))}
-              {topsisResults.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={criteria.length+3} className="text-center text-muted-foreground">Veri bulunamadı.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="w-full md:w-96 flex-shrink-0">
-          {/* Kriter Bazlı İstatistikler ve Grafikler */}
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle>Kriter Bazlı İstatistikler</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {criteriaStats.length > 0 ? (
-                <Bar
-                  data={{
-                    labels: criteriaStats.map(s => s.name),
-                    datasets: [
-                      { label: "Ortalama", data: criteriaStats.map(s => s.avg), backgroundColor: "#3b82f6" },
-                      { label: "Min", data: criteriaStats.map(s => s.min), backgroundColor: "#a3e635" },
-                      { label: "Max", data: criteriaStats.map(s => s.max), backgroundColor: "#f59e42" },
-                    ]
-                  }}
-                  options={{
-                    responsive: true,
-                    plugins: { legend: { display: true }, title: { display: false } },
-                    scales: { x: { ticks: { autoSkip: false, maxRotation: 90, minRotation: 45 } } }
-                  }}
-                  height={220}
-                />
-              ) : (
-                <span className="text-muted-foreground">Grafik ve özetler burada olacak</span>
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Performans Dağılımı</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {histogramData.counts.length > 0 ? (
-                <Bar
-                  data={{
-                    labels: histogramData.labels,
-                    datasets: [
-                      { label: "Sürücü Sayısı", data: histogramData.counts, backgroundColor: "#6366f1" }
-                    ]
-                  }}
-                  options={{
-                    responsive: true,
-                    plugins: { legend: { display: false }, title: { display: false } },
-                  }}
-                  height={180}
-                />
-              ) : (
-                <span className="text-muted-foreground">Histogram/Boxplot burada olacak</span>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              <TableHead className="cursor-pointer" onClick={() => {
+                setSortBy("closenessCoefficient")
+                setSortOrder(o => (sortBy === "closenessCoefficient" && o === "asc") ? "desc" : "asc")
+              }}>
+                TOPSIS Puanı (C*){sortBy === "closenessCoefficient" ? (sortOrder === "asc" ? " ▲" : " ▼") : ""}
+              </TableHead>
+              <TableHead className="cursor-pointer" onClick={() => {
+                setSortBy("rank")
+                setSortOrder(o => (sortBy === "rank" && o === "asc") ? "desc" : "asc")
+              }}>
+                Sıralama{sortBy === "rank" ? (sortOrder === "asc" ? " ▲" : " ▼") : ""}
+              </TableHead>
+            </TableRow>
+            {/* Filtre inputları */}
+            <TableRow>
+              <TableCell></TableCell>
+              {criteria.map(c => (
+                <TableCell key={c.id}>
+                  <input type="text" className="w-16 px-1 py-0.5 border rounded text-xs" placeholder="Filtrele" value={filters[c.id]||""} onChange={e => setFilters(f => ({...f, [c.id]: e.target.value}))} />
+                </TableCell>
+              ))}
+              <TableCell></TableCell>
+              <TableCell></TableCell>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredSortedResults.slice(0, visibleCount).map((row, i) => (
+              <TableRow key={row.driverId}>
+                <TableCell>{row.driverId}</TableCell>
+                {criteria.map(c => <TableCell key={c.id}>{row.normalizedPerformance?.[c.id]?.toFixed(2) ?? '-'}</TableCell>)}
+                <TableCell>{row.closenessCoefficient.toFixed(3)}</TableCell>
+                <TableCell>{row.rank}</TableCell>
+              </TableRow>
+            ))}
+            {filteredSortedResults.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={criteria.length+3} className="text-center text-muted-foreground">Veri bulunamadı.</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   )
