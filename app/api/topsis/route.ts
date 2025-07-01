@@ -43,14 +43,14 @@ export async function POST(request: NextRequest) {
 
       // Validate weights
       const weightValues = Object.values(globalWeights)
-      const isValidWeights = weightValues.every((w) => !isNaN(w) && w >= 0 && w <= 1)
-      const weightSum = weightValues.reduce((sum, w) => sum + w, 0)
+        const isValidWeights = weightValues.every((w) => !isNaN(w) && w >= 0 && w <= 1)
+        const weightSum = weightValues.reduce((sum, w) => sum + w, 0)
 
-      if (!isValidWeights || Math.abs(weightSum - 1) > 0.01) {
-        return NextResponse.json(
-          {
+        if (!isValidWeights || Math.abs(weightSum - 1) > 0.01) {
+          return NextResponse.json(
+            {
             error: `Geçersiz AHP ağırlıkları. Ağırlıklar toplamı ${weightSum.toFixed(4)} olmalıdır (1.0 olmalı).`,
-          },
+            },
           { status: 400 }
         )
       }
@@ -125,22 +125,22 @@ export async function POST(request: NextRequest) {
       // Extract values for each criterion
       for (const criterion of leafCriteria) {
         let value = 0
-        let columnIndex = -1
+      let columnIndex = -1
 
         // Find column for this criterion
-        if (headerToIndexMap[criterion.name] !== undefined) {
-          columnIndex = headerToIndexMap[criterion.name]
-        } else {
+      if (headerToIndexMap[criterion.name] !== undefined) {
+        columnIndex = headerToIndexMap[criterion.name]
+      } else {
           // Check alternative mappings
-          for (const [headerName, criterionId] of Object.entries(excelColumnMappings)) {
-            if (criterionId === criterion.id && headerToIndexMap[headerName] !== undefined) {
-              columnIndex = headerToIndexMap[headerName]
-              break
-            }
+        for (const [headerName, criterionId] of Object.entries(excelColumnMappings)) {
+          if (criterionId === criterion.id && headerToIndexMap[headerName] !== undefined) {
+            columnIndex = headerToIndexMap[headerName]
+            break
           }
         }
+      }
 
-        if (columnIndex !== -1) {
+      if (columnIndex !== -1) {
           const rawValue = row[columnIndex]
           if (typeof rawValue === "string") {
             const cleanValue = rawValue.replace(",", ".").trim()
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`Processed ${driversData.length} drivers with ${leafCriteria.length} criteria`)
-    
+
     // Log sample data for debugging
     if (driversData.length > 0) {
       console.log("Sample driver data (first driver):", driversData[0])
@@ -193,8 +193,8 @@ export async function POST(request: NextRequest) {
 
     const weightsUsed = leafCriteria
       .map((criterion) => ({
-        criterion: criterion.name,
-        criterionId: criterion.id,
+          criterion: criterion.name,
+          criterionId: criterion.id,
         weight: globalWeights[criterion.id] || 0,
         percentage: ((globalWeights[criterion.id] || 0) * 100).toFixed(2) + "%",
       }))
