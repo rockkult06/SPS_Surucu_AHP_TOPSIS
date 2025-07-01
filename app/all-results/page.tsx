@@ -144,7 +144,7 @@ export default function AllResultsPage() {
     
     // 1. TOPSIS Sonuçları
     const resultsData = [
-      ["Sicil No", ...criteria.map(c => c.name), "TOPSIS Puanı (C*)", "Sıralama"]
+      ["Sicil No", ...criteria.map(c => c.name), "TOPSIS Puani (C*)", "Siralama"]
     ]
     filteredSortedResults.forEach(row => {
       const rowData = [
@@ -156,7 +156,7 @@ export default function AllResultsPage() {
       resultsData.push(rowData)
     })
     const wsResults = XLSX.utils.aoa_to_sheet(resultsData)
-    XLSX.utils.book_append_sheet(wb, wsResults, "TOPSIS Sonuçları")
+    XLSX.utils.book_append_sheet(wb, wsResults, "TOPSIS_Sonuclari")
 
     // 2. AHP Kriter Ağırlıkları
     const ahpData = [["Kriter", "Ağırlık", "Yüzde (%)"]]
@@ -177,7 +177,7 @@ export default function AllResultsPage() {
       } catch {}
     }
     const wsAhp = XLSX.utils.aoa_to_sheet(ahpData)
-    XLSX.utils.book_append_sheet(wb, wsAhp, "AHP Kriter Ağırlıkları")
+    XLSX.utils.book_append_sheet(wb, wsAhp, "AHP_Kriter_Agırlıkları")
 
     // 3. Normalize Matris
     const normalizeData = [["Sicil No", ...criteria.map(c => c.name)]]
@@ -189,7 +189,7 @@ export default function AllResultsPage() {
       normalizeData.push(rowData)
     })
     const wsNormalize = XLSX.utils.aoa_to_sheet(normalizeData)
-    XLSX.utils.book_append_sheet(wb, wsNormalize, "Normalize Matris")
+    XLSX.utils.book_append_sheet(wb, wsNormalize, "Normalize_Matris")
 
     // 4. Ağırlıklı Normalize Matris
     const weightedData = [["Sicil No", ...criteria.map(c => c.name)]]
@@ -201,10 +201,10 @@ export default function AllResultsPage() {
       weightedData.push(rowData)
     })
     const wsWeighted = XLSX.utils.aoa_to_sheet(weightedData)
-    XLSX.utils.book_append_sheet(wb, wsWeighted, "Ağırlıklı Normalize")
+    XLSX.utils.book_append_sheet(wb, wsWeighted, "Agirlikli_Normalize")
 
     // 5. İdeal Çözümler
-    const idealData = [["Kriter", "İdeal Pozitif (A+)", "İdeal Negatif (A-)"]]
+    const idealData = [["Kriter", "Ideal Pozitif (A+)", "Ideal Negatif (A-)"]]
     if (filteredSortedResults.length > 0) {
       const firstResult = filteredSortedResults[0]
       criteria.forEach(c => {
@@ -216,10 +216,10 @@ export default function AllResultsPage() {
       })
     }
     const wsIdeal = XLSX.utils.aoa_to_sheet(idealData)
-    XLSX.utils.book_append_sheet(wb, wsIdeal, "İdeal Çözümler")
+    XLSX.utils.book_append_sheet(wb, wsIdeal, "Ideal_Cozumler")
 
     // 6. Uzaklıklar ve C* Hesaplaması
-    const distanceData = [["Sicil No", "d+ (İdeal Uzaklık)", "d- (Anti-İdeal Uzaklık)", "Yakınlık Katsayısı (C*)"]]
+    const distanceData = [["Sicil No", "d+ (Ideal Uzaklik)", "d- (Anti-Ideal Uzaklik)", "Yakinlik Katsayisi (C*)"]]
     filteredSortedResults.forEach(row => {
       distanceData.push([
         row.driverId,
@@ -229,7 +229,7 @@ export default function AllResultsPage() {
       ])
     })
     const wsDistance = XLSX.utils.aoa_to_sheet(distanceData)
-    XLSX.utils.book_append_sheet(wb, wsDistance, "Uzaklıklar ve C*")
+    XLSX.utils.book_append_sheet(wb, wsDistance, "Uzakliklar_ve_C")
 
     // Dosyayı kaydet
     XLSX.writeFile(wb, `TOPSIS_Tam_Analiz_${new Date().toLocaleDateString()}.xlsx`)
@@ -257,13 +257,13 @@ export default function AllResultsPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+                        <CardHeader>
             <CardTitle>Mükemmel Performanslılar</CardTitle>
-          </CardHeader>
-          <CardContent>
+                        </CardHeader>
+                        <CardContent>
             <span className="text-2xl font-bold">{kpi.excellentCount}</span>
-          </CardContent>
-        </Card>
+                        </CardContent>
+                      </Card>
       </div>
       {/* Kriter Bazlı Ortalama Değerler - Progress Bar Kartları */}
       <div className="mb-8">
@@ -287,14 +287,14 @@ export default function AllResultsPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+                  </div>
       {/* En Yüksek ve En Düşük Puan Alanlar Kartları */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         <Card>
-          <CardHeader>
+                        <CardHeader>
             <CardTitle>En Yüksek Puan Alanlar</CardTitle>
-          </CardHeader>
-          <CardContent>
+                        </CardHeader>
+                        <CardContent>
             <ul className="space-y-1">
               {filteredSortedResults.slice(0, 3).map((row, i) => (
                 <li key={row.driverId} className="flex items-center justify-between text-sm">
@@ -304,8 +304,8 @@ export default function AllResultsPage() {
                 </li>
               ))}
             </ul>
-          </CardContent>
-        </Card>
+                        </CardContent>
+                      </Card>
         <Card>
           <CardHeader>
             <CardTitle>En Düşük Puan Alanlar</CardTitle>
