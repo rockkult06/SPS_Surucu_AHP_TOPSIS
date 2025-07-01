@@ -446,9 +446,25 @@ export default function TOPSISPage() {
               </Alert>
             )}
 
-            <div className="grid gap-4 mb-8">
-              <Label htmlFor="data-upload">Sürücü Verilerini Yükle (Excel)</Label>
-              <Input id="data-upload" type="file" accept=".xlsx, .xls" onChange={handleFileUpload} disabled={loading} />
+            <div className="flex gap-4 items-end mb-8">
+              <div className="flex flex-col flex-1">
+                <Label htmlFor="data-upload">Sürücü Verilerini Yükle (Excel)</Label>
+                <Input 
+                  id="data-upload" 
+                  type="file" 
+                  accept=".xlsx, .xls" 
+                  onChange={handleFileUpload} 
+                  disabled={loading}
+                  className="file:bg-blue-600 file:text-white file:font-semibold file:px-4 file:py-2 file:rounded-lg file:border-0 file:cursor-pointer file:transition-colors file:hover:bg-blue-700 file:shadow-sm file:mr-4"
+                />
+              </div>
+              <Button
+                onClick={handleCalculateTOPSIS}
+                disabled={loading || driversData.length === 0 || selectedCriteria.length === 0}
+                className="h-10 px-6 text-base font-semibold bg-green-600 hover:bg-green-700 text-white shadow-md disabled:bg-gray-300 disabled:text-gray-500"
+              >
+                {loading ? "Hesaplanıyor..." : "TOPSIS Sıralamasını Hesapla"}
+              </Button>
             </div>
 
             {driversData.length > 0 && (
@@ -542,15 +558,6 @@ export default function TOPSISPage() {
                 </Alert>
               </div>
             )}
-
-            <div className="flex justify-center">
-              <Button
-                onClick={handleCalculateTOPSIS}
-                disabled={loading || driversData.length === 0 || selectedCriteria.length === 0}
-              >
-                {loading ? "Hesaplanıyor..." : "TOPSIS Sıralamasını Hesapla"}
-              </Button>
-            </div>
 
             {topsisResults.length > 0 && (
               <div className="mt-8">
