@@ -265,29 +265,6 @@ export default function AllResultsPage() {
           </div>
         </div>
       </div>
-      {/* Kriter Bazlı Ortalama Değerler - Progress Bar Kartları */}
-      <div className="mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Kriter Bazlı Ortalama Değerler</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {criteriaStats.length > 0 ? (
-                criteriaStats.map(s => (
-                  <div key={s.id} className="flex flex-col gap-1 p-3 border rounded-lg bg-gray-50 dark:bg-gray-900/10">
-                    <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate" title={s.name}>{s.name}</span>
-                    <Progress value={Math.round(s.avg * 100)} max={100} className="h-2 bg-gray-200" />
-                    <span className="text-xs text-gray-500 mt-1">Ortalama: <b>{s.avg.toFixed(2)}</b></span>
-                  </div>
-                ))
-              ) : (
-                <span className="text-muted-foreground">Grafik ve özetler burada olacak</span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
       {/* En Yüksek ve En Düşük Puan Alanlar Kartları */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         <Card>
