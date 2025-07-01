@@ -446,7 +446,7 @@ export default function TOPSISPage() {
               </Alert>
             )}
 
-            <div className="flex gap-4 items-end mb-8">
+            <div className="flex flex-col sm:flex-row gap-4 items-end mb-8">
               <div className="flex flex-col flex-1">
                 <Label htmlFor="data-upload">Sürücü Verilerini Yükle (Excel)</Label>
                 <Input 
