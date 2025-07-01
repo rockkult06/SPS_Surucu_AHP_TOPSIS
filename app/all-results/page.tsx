@@ -12,6 +12,7 @@ import * as XLSX from "xlsx"
 import { criteriaHierarchy, getLeafCriteria } from "@/lib/criteria-hierarchy"
 import type { TOPSISResult } from "@/lib/topsis"
 import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js"
+import { Progress } from "@/components/ui/progress"
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 export default function AllResultsPage() {
@@ -152,32 +153,26 @@ export default function AllResultsPage() {
           </CardContent>
         </Card>
       </div>
-      {/* Kriter Bazlı İstatistikler Grafiği */}
+      {/* Kriter Bazlı Ortalama Değerler - Progress Bar Kartları */}
       <div className="mb-8">
         <Card>
           <CardHeader>
             <CardTitle>Kriter Bazlı Ortalama Değerler</CardTitle>
           </CardHeader>
           <CardContent>
-            {criteriaStats.length > 0 ? (
-              <Bar
-                data={{
-                  labels: criteriaStats.map(s => s.name.length > 18 ? s.name.slice(0,18)+"..." : s.name),
-                  datasets: [
-                    { label: "Ortalama", data: criteriaStats.map(s => s.avg), backgroundColor: "#3b82f6" },
-                  ]
-                }}
-                options={{
-                  indexAxis: 'y',
-                  responsive: true,
-                  plugins: { legend: { display: false }, title: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x.toFixed(2)}` } } },
-                  scales: { y: { ticks: { autoSkip: false, font: { size: 10 } } } }
-                }}
-                height={320}
-              />
-            ) : (
-              <span className="text-muted-foreground">Grafik ve özetler burada olacak</span>
-            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {criteriaStats.length > 0 ? (
+                criteriaStats.map(s => (
+                  <div key={s.id} className="flex flex-col gap-1 p-3 border rounded-lg bg-gray-50 dark:bg-gray-900/10">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate" title={s.name}>{s.name}</span>
+                    <Progress value={Math.round(s.avg * 100)} max={100} className="h-2 bg-gray-200" />
+                    <span className="text-xs text-gray-500 mt-1">Ortalama: <b>{s.avg.toFixed(2)}</b></span>
+                  </div>
+                ))
+              ) : (
+                <span className="text-muted-foreground">Grafik ve özetler burada olacak</span>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
