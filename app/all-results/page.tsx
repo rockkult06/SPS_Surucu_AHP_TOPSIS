@@ -153,112 +153,135 @@ export default function AllResultsPage() {
   }
 
   const exportTopsisToExcel = (result: StoredTOPSISResult) => {
-    // 0. Genel Bilgiler
-    const infoData = [
-      ["TOPSIS Hesaplama Raporu"],
-      [],
-      ["Değerlendirmeyi Yapan:", result.evaluatorName],
-      ["Hesaplama Tarihi:", new Date(result.date).toLocaleString()],
-      ["Toplam Sürücü Sayısı:", result.topsisResults.length.toString()],
-      [],
-      ["Rapor İçeriği:"],
-      ["1. TOPSIS Sonuçları - Sıralama ve yakınlık katsayıları"],
-      ["2. Normalize Matris - Normalize edilmiş performans değerleri"],
-      ["3. Ağırlıklı Normalize - Ağırlıklı normalize edilmiş değerler"],
-      ["4. İdeal Çözümler - İdeal pozitif ve negatif çözümler"],
-      ["5. Uzaklıklar ve C* - Uzaklık hesaplamaları ve yakınlık katsayıları"],
-      ["6. Ham Veri - Orijinal sürücü performans verileri"]
-    ]
-    const wsInfo = XLSX.utils.aoa_to_sheet(infoData)
+    try {
+      console.log("TOPSIS Excel export başlatılıyor...", result)
+      
+      // Veri kontrolü
+      if (!result.topsisResults || result.topsisResults.length === 0) {
+        console.error("TOPSIS sonuçları boş!")
+        alert("TOPSIS sonuçları bulunamadı!")
+        return
+      }
 
-    // 1. TOPSIS Sonuçları
-    const resultsData = [["Sıra", "Sürücü Sicil No", "Yakınlık Katsayısı (C*)", "TOPSIS Puanı (%)"]]
-    result.topsisResults.forEach((topsisRes) => {
-      resultsData.push([
-        topsisRes.rank,
-        topsisRes.driverId,
-        topsisRes.closenessCoefficient.toFixed(6),
-        (topsisRes.closenessCoefficient * 100).toFixed(2),
-      ])
-    })
-    const wsResults = XLSX.utils.aoa_to_sheet(resultsData)
+      // 0. Genel Bilgiler
+      const infoData = [
+        ["TOPSIS Hesaplama Raporu"],
+        [],
+        ["Değerlendirmeyi Yapan:", result.evaluatorName],
+        ["Hesaplama Tarihi:", new Date(result.date).toLocaleString()],
+        ["Toplam Sürücü Sayısı:", result.topsisResults.length.toString()],
+        [],
+        ["Rapor İçeriği:"],
+        ["1. TOPSIS Sonuçları - Sıralama ve yakınlık katsayıları"],
+        ["2. Normalize Matris - Normalize edilmiş performans değerleri"],
+        ["3. Ağırlıklı Normalize - Ağırlıklı normalize edilmiş değerler"],
+        ["4. İdeal Çözümler - İdeal pozitif ve negatif çözümler"],
+        ["5. Uzaklıklar ve C* - Uzaklık hesaplamaları ve yakınlık katsayıları"],
+        ["6. Ham Veri - Orijinal sürücü performans verileri"]
+      ]
+      const wsInfo = XLSX.utils.aoa_to_sheet(infoData)
 
-    // 2. Normalize Matris
-    const leafCriteria = Object.keys(result.topsisResults[0]?.normalizedPerformance || {})
-    const normalizeHeaders = ["Sürücü Sicil No", ...leafCriteria]
-    const normalizeData = [normalizeHeaders]
-    result.topsisResults.forEach((topsisRes) => {
-      const row = [topsisRes.driverId]
-      leafCriteria.forEach((c) => {
-        row.push(topsisRes.normalizedPerformance[c]?.toFixed(6) ?? "")
-      })
-      normalizeData.push(row)
-    })
-    const wsNormalize = XLSX.utils.aoa_to_sheet(normalizeData)
-
-    // 3. Ağırlıklı Normalize Matris
-    const weightedHeaders = ["Sürücü Sicil No", ...leafCriteria]
-    const weightedData = [weightedHeaders]
-    result.topsisResults.forEach((topsisRes) => {
-      const row = [topsisRes.driverId]
-      leafCriteria.forEach((c) => {
-        row.push(topsisRes.weightedNormalizedPerformance[c]?.toFixed(6) ?? "")
-      })
-      weightedData.push(row)
-    })
-    const wsWeighted = XLSX.utils.aoa_to_sheet(weightedData)
-
-    // 4. İdeal Çözümler
-    const idealHeaders = ["Kriter", "İdeal (A+)", "Anti-İdeal (A-)"]
-    const idealData = [idealHeaders]
-    if (result.topsisResults.length > 0) {
-      const first = result.topsisResults[0]
-      leafCriteria.forEach((c) => {
-        idealData.push([
-          c,
-          first.idealPositive[c]?.toFixed(6) ?? "",
-          first.idealNegative[c]?.toFixed(6) ?? "",
+      // 1. TOPSIS Sonuçları
+      const resultsData = [["Sıra", "Sürücü Sicil No", "Yakınlık Katsayısı (C*)", "TOPSIS Puanı (%)"]]
+      result.topsisResults.forEach((topsisRes) => {
+        resultsData.push([
+          topsisRes.rank,
+          topsisRes.driverId,
+          topsisRes.closenessCoefficient.toFixed(6),
+          (topsisRes.closenessCoefficient * 100).toFixed(2),
         ])
       })
-    }
-    const wsIdeal = XLSX.utils.aoa_to_sheet(idealData)
+      const wsResults = XLSX.utils.aoa_to_sheet(resultsData)
 
-    // 5. Uzaklıklar ve C*
-    const distHeaders = ["Sürücü Sicil No", "d+ (İdeal Uzaklık)", "d- (Anti-İdeal Uzaklık)", "Yakınlık Katsayısı (C*)"]
-    const distData = [distHeaders]
-    result.topsisResults.forEach((topsisRes) => {
-      distData.push([
-        topsisRes.driverId,
-        topsisRes.distanceToPositive.toFixed(6),
-        topsisRes.distanceToNegative.toFixed(6),
-        topsisRes.closenessCoefficient.toFixed(6),
-      ])
-    })
-    const wsDist = XLSX.utils.aoa_to_sheet(distData)
-
-    // 6. Ham Veri (Orijinal performans verileri)
-    const rawHeaders = ["Sürücü Sicil No", ...leafCriteria]
-    const rawData = [rawHeaders]
-    result.driversData.forEach((driver) => {
-      const row = [driver.driverId]
-      leafCriteria.forEach((c) => {
-        const value = driver[c]
-        row.push(typeof value === "number" ? value.toFixed(2) : value || "")
+      // 2. Normalize Matris
+      const leafCriteria = Object.keys(result.topsisResults[0]?.normalizedPerformance || {})
+      console.log("Leaf criteria:", leafCriteria)
+      
+      const normalizeHeaders = ["Sürücü Sicil No", ...leafCriteria]
+      const normalizeData = [normalizeHeaders]
+      result.topsisResults.forEach((topsisRes) => {
+        const row = [topsisRes.driverId]
+        leafCriteria.forEach((c) => {
+          row.push(topsisRes.normalizedPerformance[c]?.toFixed(6) ?? "")
+        })
+        normalizeData.push(row)
       })
-      rawData.push(row)
-    })
-    const wsRaw = XLSX.utils.aoa_to_sheet(rawData)
+      const wsNormalize = XLSX.utils.aoa_to_sheet(normalizeData)
 
-    // Kitap oluştur ve sheet'leri ekle
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, wsInfo, "Genel Bilgiler")
-    XLSX.utils.book_append_sheet(wb, wsResults, "TOPSIS Sonuçları")
-    XLSX.utils.book_append_sheet(wb, wsNormalize, "Normalize Matris")
-    XLSX.utils.book_append_sheet(wb, wsWeighted, "Ağırlıklı Normalize")
-    XLSX.utils.book_append_sheet(wb, wsIdeal, "İdeal Çözümler")
-    XLSX.utils.book_append_sheet(wb, wsDist, "Uzaklıklar ve C*")
-    XLSX.utils.book_append_sheet(wb, wsRaw, "Ham Veri")
-    XLSX.writeFile(wb, `TOPSIS_Tum_Asamalar_${result.evaluatorName}_${new Date(result.date).toLocaleDateString()}.xlsx`)
+      // 3. Ağırlıklı Normalize Matris
+      const weightedHeaders = ["Sürücü Sicil No", ...leafCriteria]
+      const weightedData = [weightedHeaders]
+      result.topsisResults.forEach((topsisRes) => {
+        const row = [topsisRes.driverId]
+        leafCriteria.forEach((c) => {
+          row.push(topsisRes.weightedNormalizedPerformance[c]?.toFixed(6) ?? "")
+        })
+        weightedData.push(row)
+      })
+      const wsWeighted = XLSX.utils.aoa_to_sheet(weightedData)
+
+      // 4. İdeal Çözümler
+      const idealHeaders = ["Kriter", "İdeal (A+)", "Anti-İdeal (A-)"]
+      const idealData = [idealHeaders]
+      if (result.topsisResults.length > 0) {
+        const first = result.topsisResults[0]
+        leafCriteria.forEach((c) => {
+          idealData.push([
+            c,
+            first.idealPositive[c]?.toFixed(6) ?? "",
+            first.idealNegative[c]?.toFixed(6) ?? "",
+          ])
+        })
+      }
+      const wsIdeal = XLSX.utils.aoa_to_sheet(idealData)
+
+      // 5. Uzaklıklar ve C*
+      const distHeaders = ["Sürücü Sicil No", "d+ (İdeal Uzaklık)", "d- (Anti-İdeal Uzaklık)", "Yakınlık Katsayısı (C*)"]
+      const distData = [distHeaders]
+      result.topsisResults.forEach((topsisRes) => {
+        distData.push([
+          topsisRes.driverId,
+          topsisRes.distanceToPositive.toFixed(6),
+          topsisRes.distanceToNegative.toFixed(6),
+          topsisRes.closenessCoefficient.toFixed(6),
+        ])
+      })
+      const wsDist = XLSX.utils.aoa_to_sheet(distData)
+
+      // 6. Ham Veri (Orijinal performans verileri)
+      const rawHeaders = ["Sürücü Sicil No", ...leafCriteria]
+      const rawData = [rawHeaders]
+      if (result.driversData && result.driversData.length > 0) {
+        result.driversData.forEach((driver) => {
+          const row = [driver.driverId]
+          leafCriteria.forEach((c) => {
+            const value = driver[c]
+            row.push(typeof value === "number" ? value.toFixed(2) : value || "")
+          })
+          rawData.push(row)
+        })
+      }
+      const wsRaw = XLSX.utils.aoa_to_sheet(rawData)
+
+      // Kitap oluştur ve sheet'leri ekle
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, wsInfo, "Genel Bilgiler")
+      XLSX.utils.book_append_sheet(wb, wsResults, "TOPSIS Sonuçları")
+      XLSX.utils.book_append_sheet(wb, wsNormalize, "Normalize Matris")
+      XLSX.utils.book_append_sheet(wb, wsWeighted, "Ağırlıklı Normalize")
+      XLSX.utils.book_append_sheet(wb, wsIdeal, "İdeal Çözümler")
+      XLSX.utils.book_append_sheet(wb, wsDist, "Uzaklıklar ve C*")
+      XLSX.utils.book_append_sheet(wb, wsRaw, "Ham Veri")
+      
+      const fileName = `TOPSIS_Tum_Asamalar_${result.evaluatorName}_${new Date(result.date).toLocaleDateString()}.xlsx`
+      console.log("Dosya kaydediliyor:", fileName)
+      XLSX.writeFile(wb, fileName)
+      
+      console.log("TOPSIS Excel export tamamlandı!")
+    } catch (error) {
+      console.error("TOPSIS Excel export hatası:", error)
+      alert(`Excel dışa aktarma hatası: ${error}`)
+    }
   }
 
   const exportAhpToPdf = (result: StoredAHPResult) => {
@@ -526,7 +549,13 @@ export default function AllResultsPage() {
                             </TableBody>
                           </Table>
                           <div className="flex gap-2 mt-4 justify-end">
-                            <Button size="sm" onClick={() => exportTopsisToExcel(result)}>
+                            <Button 
+                              size="sm" 
+                              onClick={() => {
+                                console.log("Excel butonu tıklandı, result:", result)
+                                exportTopsisToExcel(result)
+                              }}
+                            >
                               <Download className="h-4 w-4 mr-2" /> Excel
                             </Button>
                             <Button size="sm" onClick={() => exportTopsisToPdf(result)}>
