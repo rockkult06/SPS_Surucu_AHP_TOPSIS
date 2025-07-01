@@ -29,6 +29,7 @@ export default function TOPSISPage() {
   const [criteriaTypes, setCriteriaTypes] = useState<Record<string, boolean>>({}) // true for benefit, false for cost
   const [useDefaultWeights, setUseDefaultWeights] = useState(false)
   const [hasAhpWeights, setHasAhpWeights] = useState(false)
+  const [selectedFileName, setSelectedFileName] = useState("")
 
   const leafCriteria = useMemo(() => getLeafCriteria(), [])
   const excelColumnMappings = useMemo(() => getExcelColumnMappings(), [])
@@ -76,6 +77,7 @@ export default function TOPSISPage() {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
+    setSelectedFileName(file.name)
 
     setLoading(true)
     setError(null)
@@ -449,14 +451,27 @@ export default function TOPSISPage() {
             <div className="flex flex-col sm:flex-row gap-4 items-end mb-8">
               <div className="flex flex-col flex-1">
                 <Label htmlFor="data-upload">Sürücü Verilerini Yükle (Excel)</Label>
-                <Input 
-                  id="data-upload" 
-                  type="file" 
-                  accept=".xlsx, .xls" 
-                  onChange={handleFileUpload} 
-                  disabled={loading}
-                  className="file:bg-blue-600 file:text-white file:font-semibold file:px-4 file:py-2 file:rounded-lg file:border-0 file:cursor-pointer file:transition-colors file:hover:bg-blue-700 file:shadow-sm file:mr-4"
-                />
+                <div className="flex items-center gap-2 mt-1">
+                  <input
+                    id="data-upload"
+                    type="file"
+                    accept=".xlsx, .xls"
+                    onChange={handleFileUpload}
+                    disabled={loading}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => document.getElementById('data-upload')?.click()}
+                    className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg"
+                    disabled={loading}
+                  >
+                    Dosya Seç
+                  </Button>
+                  <span className="text-sm text-gray-500 truncate max-w-[180px]">
+                    {selectedFileName || "Dosya seçilmedi"}
+                  </span>
+                </div>
               </div>
               <Button
                 onClick={handleCalculateTOPSIS}
