@@ -11,6 +11,8 @@ import { Bar, Pie } from "react-chartjs-2"
 import * as XLSX from "xlsx"
 import { criteriaHierarchy, getLeafCriteria } from "@/lib/criteria-hierarchy"
 import type { TOPSISResult } from "@/lib/topsis"
+import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js"
+Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 export default function AllResultsPage() {
   const [topsisResults, setTopsisResults] = useState<TOPSISResult[]>([])
@@ -26,6 +28,11 @@ export default function AllResultsPage() {
     stdC: 0,
     excellentCount: 0,
   })
+
+  // Kriter bazlı istatistikler
+  const [criteriaStats, setCriteriaStats] = useState<any[]>([])
+  // Histogram için
+  const [histogramData, setHistogramData] = useState<{labels: string[], counts: number[]}>({labels: [], counts: []})
 
   useEffect(() => {
     // Kriterleri çek
@@ -55,6 +62,28 @@ export default function AllResultsPage() {
             stdC,
             excellentCount,
           })
+          // Kriter istatistikleri hesapla
+          if (last.topsisResults.length > 0 && leaf.length > 0) {
+            const stats = leaf.map(c => {
+              const vals = last.topsisResults.map(r => r.normalizedPerformance?.[c.id] ?? 0)
+              const avg = vals.reduce((a, b) => a + b, 0) / vals.length
+              const min = Math.min(...vals)
+              const max = Math.max(...vals)
+              const std = Math.sqrt(vals.reduce((a, b) => a + Math.pow(b-avg,2), 0) / vals.length)
+              return { id: c.id, name: c.name, avg, min, max, std }
+            })
+            setCriteriaStats(stats)
+            // Histogram (C* dağılımı)
+            const bins = Array(10).fill(0)
+            cArr.forEach(val => {
+              const idx = Math.min(9, Math.floor(val * 10))
+              bins[idx]++
+            })
+            setHistogramData({
+              labels: bins.map((_, i) => `${(i/10).toFixed(1)}–${((i+1)/10).toFixed(1)}`),
+              counts: bins
+            })
+          }
         }
       } catch {}
     }
@@ -135,7 +164,26 @@ export default function AllResultsPage() {
               <CardTitle>Kriter Bazlı İstatistikler</CardTitle>
             </CardHeader>
             <CardContent>
-              <span className="text-muted-foreground">Grafik ve özetler burada olacak</span>
+              {criteriaStats.length > 0 ? (
+                <Bar
+                  data={{
+                    labels: criteriaStats.map(s => s.name),
+                    datasets: [
+                      { label: "Ortalama", data: criteriaStats.map(s => s.avg), backgroundColor: "#3b82f6" },
+                      { label: "Min", data: criteriaStats.map(s => s.min), backgroundColor: "#a3e635" },
+                      { label: "Max", data: criteriaStats.map(s => s.max), backgroundColor: "#f59e42" },
+                    ]
+                  }}
+                  options={{
+                    responsive: true,
+                    plugins: { legend: { display: true }, title: { display: false } },
+                    scales: { x: { ticks: { autoSkip: false, maxRotation: 90, minRotation: 45 } } }
+                  }}
+                  height={220}
+                />
+              ) : (
+                <span className="text-muted-foreground">Grafik ve özetler burada olacak</span>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -143,7 +191,23 @@ export default function AllResultsPage() {
               <CardTitle>Performans Dağılımı</CardTitle>
             </CardHeader>
             <CardContent>
-              <span className="text-muted-foreground">Histogram/Boxplot burada olacak</span>
+              {histogramData.counts.length > 0 ? (
+                <Bar
+                  data={{
+                    labels: histogramData.labels,
+                    datasets: [
+                      { label: "Sürücü Sayısı", data: histogramData.counts, backgroundColor: "#6366f1" }
+                    ]
+                  }}
+                  options={{
+                    responsive: true,
+                    plugins: { legend: { display: false }, title: { display: false } },
+                  }}
+                  height={180}
+                />
+              ) : (
+                <span className="text-muted-foreground">Histogram/Boxplot burada olacak</span>
+              )}
             </CardContent>
           </Card>
         </div>
