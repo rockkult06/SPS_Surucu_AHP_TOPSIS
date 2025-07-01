@@ -133,17 +133,19 @@ export default function AllResultsPage() {
     }
   }
 
-  // Excel'e Aktar fonksiyonu
+  // Excel'e Aktar fonksiyonu (Çoklu çalışma sayfası)
   const exportToExcel = () => {
     if (filteredSortedResults.length === 0) {
       alert("Dışa aktarılacak veri bulunamadı.")
       return
     }
     
-    const data = [
+    const wb = XLSX.utils.book_new()
+    
+    // 1. TOPSIS Sonuçları
+    const resultsData = [
       ["Sicil No", ...criteria.map(c => c.name), "TOPSIS Puanı (C*)", "Sıralama"]
     ]
-    
     filteredSortedResults.forEach(row => {
       const rowData = [
         row.driverId,
@@ -151,13 +153,86 @@ export default function AllResultsPage() {
         row.closenessCoefficient.toFixed(3),
         row.rank.toString()
       ]
-      data.push(rowData)
+      resultsData.push(rowData)
     })
-    
-    const ws = XLSX.utils.aoa_to_sheet(data)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "TOPSIS Sonuçları")
-    XLSX.writeFile(wb, `TOPSIS_Tum_Sonuclar_${new Date().toLocaleDateString()}.xlsx`)
+    const wsResults = XLSX.utils.aoa_to_sheet(resultsData)
+    XLSX.utils.book_append_sheet(wb, wsResults, "TOPSIS Sonuçları")
+
+    // 2. AHP Kriter Ağırlıkları
+    const ahpData = [["Kriter", "Ağırlık", "Yüzde (%)"]]
+    const storedAhp = localStorage.getItem("ahpResults")
+    if (storedAhp) {
+      try {
+        const ahpResults = JSON.parse(storedAhp)
+        if (ahpResults.globalWeights) {
+          Object.entries(ahpResults.globalWeights).forEach(([id, weight]: [string, any]) => {
+            const criterion = criteria.find(c => c.id === id)
+            ahpData.push([
+              criterion?.name || id,
+              weight.toFixed(4),
+              (weight * 100).toFixed(2)
+            ])
+          })
+        }
+      } catch {}
+    }
+    const wsAhp = XLSX.utils.aoa_to_sheet(ahpData)
+    XLSX.utils.book_append_sheet(wb, wsAhp, "AHP Kriter Ağırlıkları")
+
+    // 3. Normalize Matris
+    const normalizeData = [["Sicil No", ...criteria.map(c => c.name)]]
+    filteredSortedResults.forEach(row => {
+      const rowData = [
+        row.driverId,
+        ...criteria.map(c => row.normalizedPerformance?.[c.id]?.toFixed(6) ?? "0")
+      ]
+      normalizeData.push(rowData)
+    })
+    const wsNormalize = XLSX.utils.aoa_to_sheet(normalizeData)
+    XLSX.utils.book_append_sheet(wb, wsNormalize, "Normalize Matris")
+
+    // 4. Ağırlıklı Normalize Matris
+    const weightedData = [["Sicil No", ...criteria.map(c => c.name)]]
+    filteredSortedResults.forEach(row => {
+      const rowData = [
+        row.driverId,
+        ...criteria.map(c => row.weightedNormalizedPerformance?.[c.id]?.toFixed(6) ?? "0")
+      ]
+      weightedData.push(rowData)
+    })
+    const wsWeighted = XLSX.utils.aoa_to_sheet(weightedData)
+    XLSX.utils.book_append_sheet(wb, wsWeighted, "Ağırlıklı Normalize")
+
+    // 5. İdeal Çözümler
+    const idealData = [["Kriter", "İdeal Pozitif (A+)", "İdeal Negatif (A-)"]]
+    if (filteredSortedResults.length > 0) {
+      const firstResult = filteredSortedResults[0]
+      criteria.forEach(c => {
+        idealData.push([
+          c.name,
+          firstResult.idealPositive?.[c.id]?.toFixed(6) ?? "0",
+          firstResult.idealNegative?.[c.id]?.toFixed(6) ?? "0"
+        ])
+      })
+    }
+    const wsIdeal = XLSX.utils.aoa_to_sheet(idealData)
+    XLSX.utils.book_append_sheet(wb, wsIdeal, "İdeal Çözümler")
+
+    // 6. Uzaklıklar ve C* Hesaplaması
+    const distanceData = [["Sicil No", "d+ (İdeal Uzaklık)", "d- (Anti-İdeal Uzaklık)", "Yakınlık Katsayısı (C*)"]]
+    filteredSortedResults.forEach(row => {
+      distanceData.push([
+        row.driverId,
+        row.distanceToPositive?.toFixed(6) ?? "0",
+        row.distanceToNegative?.toFixed(6) ?? "0",
+        row.closenessCoefficient.toFixed(6)
+      ])
+    })
+    const wsDistance = XLSX.utils.aoa_to_sheet(distanceData)
+    XLSX.utils.book_append_sheet(wb, wsDistance, "Uzaklıklar ve C*")
+
+    // Dosyayı kaydet
+    XLSX.writeFile(wb, `TOPSIS_Tam_Analiz_${new Date().toLocaleDateString()}.xlsx`)
   }
 
   return (
