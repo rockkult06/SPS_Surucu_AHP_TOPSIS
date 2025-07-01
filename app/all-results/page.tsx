@@ -239,31 +239,31 @@ export default function AllResultsPage() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-4">Tüm Sürücü Sonuçları</h1>
       {/* KPI Kartları */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Toplam Sürücü Sayısı</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <span className="text-2xl font-bold">{kpi.totalDrivers}</span>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Ortalama TOPSIS Puanı</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <span className="text-2xl font-bold">{kpi.avgC.toFixed(3)}</span>
-          </CardContent>
-        </Card>
-        <Card>
-                        <CardHeader>
-            <CardTitle>Mükemmel Performanslılar</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-            <span className="text-2xl font-bold">{kpi.excellentCount}</span>
-                        </CardContent>
-                      </Card>
+      <div className="grid grid-cols-3 gap-4">
+        <div className="card">
+          <div className="card-header">
+            <h2>Toplam Sürücü Sayısı</h2>
+          </div>
+          <div className="card-content">
+            <span>{kpi.totalDrivers}</span>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-header">
+            <h2>Ortalama TOPSIS Puanı</h2>
+          </div>
+          <div className="card-content">
+            <span>{kpi.avgC.toFixed(3)}</span>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-header">
+            <h2>Mükemmel Performanslılar</h2>
+          </div>
+          <div className="card-content">
+            <span>{kpi.excellentCount}</span>
+          </div>
+        </div>
       </div>
       {/* Kriter Bazlı Ortalama Değerler - Progress Bar Kartları */}
       <div className="mb-8">
@@ -287,14 +287,14 @@ export default function AllResultsPage() {
             </div>
           </CardContent>
         </Card>
-                  </div>
+      </div>
       {/* En Yüksek ve En Düşük Puan Alanlar Kartları */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         <Card>
-                        <CardHeader>
+          <CardHeader>
             <CardTitle>En Yüksek Puan Alanlar</CardTitle>
-                        </CardHeader>
-                        <CardContent>
+          </CardHeader>
+          <CardContent>
             <ul className="space-y-1">
               {filteredSortedResults.slice(0, 3).map((row, i) => (
                 <li key={row.driverId} className="flex items-center justify-between text-sm">
@@ -304,8 +304,8 @@ export default function AllResultsPage() {
                 </li>
               ))}
             </ul>
-                        </CardContent>
-                      </Card>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle>En Düşük Puan Alanlar</CardTitle>
@@ -374,8 +374,8 @@ export default function AllResultsPage() {
             {filteredSortedResults.slice(0, visibleCount).map((row, i) => (
               <TableRow key={row.driverId}>
                 <TableCell>{row.driverId}</TableCell>
-                {criteria.map(c => <TableCell key={c.id}>{row.normalizedPerformance?.[c.id]?.toFixed(2) ?? '-'}</TableCell>)}
-                <TableCell>{row.closenessCoefficient.toFixed(3)}</TableCell>
+                {criteria.map(c => <TableCell key={c.id}>{row.normalizedPerformance?.[c.id]?.toFixed(4) ?? '0.0000'}</TableCell>)}
+                <TableCell>{row.closenessCoefficient.toFixed(4)}</TableCell>
                 <TableCell>{row.rank}</TableCell>
               </TableRow>
             ))}
