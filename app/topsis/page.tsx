@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from 'next/navigation'
+import { calculateAHP } from '../../lib/ahp'
 
 export default function TOPSISPage() {
   const [driversData, setDriversData] = useState<DriverData[]>([])
@@ -250,14 +251,16 @@ export default function TOPSISPage() {
       
       // Sonuçları localStorage'a kaydet
       try {
-        // TOPSIS tüm aşamaları için optimize edilmiş veri kaydet
-        const optimizedResults = (data.results || []).map((r: any) => ({
+        // Hem özet hem de kriter bazlı puanları kaydet
+        const summaryResults = (data.results || []).map((r: any) => ({
           driverId: r.driverId,
           closenessCoefficient: r.closenessCoefficient,
-          rank: r.rank
+          rank: r.rank,
+          // Kriter bazlı puanlar (normalizedPerformance)
+          normalizedPerformance: r.normalizedPerformance || {}
         }))
-        console.log("TOPSIS kaydedilecek optimize edilmiş veri:", optimizedResults);
-        localStorage.setItem("topsisResults", JSON.stringify({ topsisResults: optimizedResults }))
+        console.log("TOPSIS kaydedilecek özet veri:", summaryResults);
+        localStorage.setItem("topsisResults", JSON.stringify({ topsisResults: summaryResults }))
         console.log("localStorage sonrası:", JSON.parse(localStorage.getItem("topsisResults")));
       } catch (e) {
         console.error("TOPSIS sonucu kaydedilemedi:", e)
@@ -386,6 +389,45 @@ export default function TOPSISPage() {
 
     doc.save("TOPSIS_Sonuclari.pdf")
   }
+
+  const exportToExcel = () => {
+    // Create a new workbook
+    const workbook = XLSX.utils.book_new();
+
+    // Add current table data to a worksheet
+    const tableData = [
+      // Example data, replace with actual table data
+      ['Driver ID', 'Performance'],
+      ['Driver 1', 0.85],
+      ['Driver 2', 0.78],
+    ];
+    const tableSheet = XLSX.utils.aoa_to_sheet(tableData);
+    XLSX.utils.book_append_sheet(workbook, tableSheet, 'Current Table');
+
+    // Add TOPSIS steps to a worksheet
+    const topsisData = calculateTOPSIS([], {}); // Replace with actual data
+    const topsisSheetData = topsisData.map(result => [
+      result.driverId,
+      result.closenessCoefficient,
+      result.rank
+    ]);
+    topsisSheetData.unshift(['Driver ID', 'Closeness Coefficient', 'Rank']);
+    const topsisSheet = XLSX.utils.aoa_to_sheet(topsisSheetData);
+    XLSX.utils.book_append_sheet(workbook, topsisSheet, 'TOPSIS Steps');
+
+    // Add AHP criteria weights to a worksheet
+    const ahpData = calculateAHP([]); // Replace with actual data
+    const ahpSheetData = ahpData.weights.map((weight, index) => [
+      `Criterion ${index + 1}`,
+      weight
+    ]);
+    ahpSheetData.unshift(['Criterion', 'Weight']);
+    const ahpSheet = XLSX.utils.aoa_to_sheet(ahpSheetData);
+    XLSX.utils.book_append_sheet(workbook, ahpSheet, 'AHP Weights');
+
+    // Export the workbook to an Excel file
+    XLSX.writeFile(workbook, 'AHP_TOPSIS_Results.xlsx');
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -611,6 +653,10 @@ export default function TOPSISPage() {
                 </div>
               </div>
             )}
+
+            <Button onClick={exportToExcel} className="mt-8 w-full bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg">
+              <Download className="h-4 w-4 mr-2" /> TOPSIS ve AHP Sonuçlarını Excel'e Aktar
+            </Button>
           </CardContent>
         </Card>
       </motion.div>
