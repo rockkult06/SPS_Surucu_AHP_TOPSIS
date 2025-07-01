@@ -78,48 +78,92 @@ export default function TOPSISPage() {
     }
   }, [leafCriteria])
 
-  // Tarayıcı ortamında localStorage'ı kontrol et
-  if (typeof window !== 'undefined') {
-    // Yeni veri yüklemeden önce localStorage'ı temizle
-    localStorage.removeItem("topsisResults");
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setSelectedFileName(file.name)
 
-    // localStorage'dan alınan veriyi kontrol et
-    const storedResults = localStorage.getItem("topsisResults");
-    if (storedResults) {
+    setLoading(true)
+    setError(null)
+    const reader = new FileReader()
+
+    reader.onload = (e) => {
       try {
-        const parsedResults = JSON.parse(storedResults);
-        console.log("localStorage sonrası:", parsedResults);
-      } catch (e) {
-        console.error("localStorage verisi okunamadı:", e);
+        const data = new Uint8Array(e.target?.result as ArrayBuffer)
+        const workbook = XLSX.read(data, { type: "array" })
+        const sheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[sheetName]
+        const json: any[] = XLSX.utils.sheet_to_json(worksheet)
+
+        const processedData: DriverData[] = json.map((row, index) => {
+          // Debug: Log first few rows to see the structure
+          if (index < 3) {
+            console.log(`Row ${index}:`, row)
+            console.log(`Available keys:`, Object.keys(row))
+          }
+
+          const driver: DriverData = {
+            driverId: row["Sicil No"] || row["SicilNo"] || row["sicil no"] || `Driver_${index}`,
+            tripCount: row["Sefer Sayısı"] || row["sefer sayısı"] || 0,
+            distance: row["Yapılan Kilometre"] || row["yapılan kilometre"] || 0,
+          }
+
+          // Log the extracted basic info
+          if (index < 3) {
+            console.log(`Extracted driver info:`, {
+              driverId: driver.driverId,
+              tripCount: driver.tripCount,
+              distance: driver.distance
+            })
+          }
+
+          leafCriteria.forEach((criterion) => {
+            let value = 0
+            
+            // Try direct criterion name first
+            if (row[criterion.name] !== undefined) {
+              const rawValue = row[criterion.name]
+              if (typeof rawValue === "string") {
+                value = Number.parseFloat(rawValue.replace(",", ".")) || 0
+              } else if (typeof rawValue === "number") {
+                value = rawValue
+              }
+            } else {
+              // Try alternative mappings
+              const excelHeader = Object.keys(excelColumnMappings).find(
+                (key) => excelColumnMappings[key] === criterion.id
+              )
+              if (excelHeader && row[excelHeader] !== undefined) {
+                const rawValue = row[excelHeader]
+                if (typeof rawValue === "string") {
+                  value = Number.parseFloat(rawValue.replace(",", ".")) || 0
+                } else if (typeof rawValue === "number") {
+                  value = rawValue
+                }
+              }
+            }
+            
+            driver[criterion.id] = value
+            
+            // Debug: Log criterion values for first driver
+            if (index === 0) {
+              console.log(`Criterion ${criterion.name} (${criterion.id}): ${value}`)
+            }
+          })
+          
+          return driver
+        })
+        setDriversData(processedData)
+        setTopsisResults([]) // Clear previous results
+      } catch (err) {
+        console.error("Error reading Excel file:", err)
+        setError("Excel dosyası okunurken bir hata oluştu. Lütfen formatı kontrol edin.")
+      } finally {
+        setLoading(false)
       }
     }
+    reader.readAsArrayBuffer(file)
   }
-
-  const handleFileUpload = async (file: File) => {
-    try {
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-      // Veriyi işleme
-      if (data && data.length > 1) {
-        // İşleme kodları...
-      }
-    } catch (error) {
-      console.error("Veri yükleme hatası:", error);
-    }
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFileName(file.name);
-      handleFileUpload(file);
-    } else {
-      setSelectedFileName("");
-    }
-  };
 
   const handleCalculateTOPSIS = async () => {
     if (driversData.length === 0) {
@@ -416,7 +460,7 @@ export default function TOPSISPage() {
                     id="data-upload"
                     type="file"
                     accept=".xlsx, .xls"
-                    onChange={handleFileChange}
+                    onChange={handleFileUpload}
                     disabled={loading}
                     className="hidden"
                   />
