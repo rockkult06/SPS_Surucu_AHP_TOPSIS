@@ -111,6 +111,16 @@ export default function TOPSISPage() {
     }
   };
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFileName(file.name);
+      handleFileUpload(file);
+    } else {
+      setSelectedFileName("");
+    }
+  };
+
   const handleCalculateTOPSIS = async () => {
     if (driversData.length === 0) {
       setError("Lütfen önce sürücü verilerini yükleyin.")
@@ -406,11 +416,7 @@ export default function TOPSISPage() {
                     id="data-upload"
                     type="file"
                     accept=".xlsx, .xls"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        handleFileUpload(e.target.files[0])
-                      }
-                    }}
+                    onChange={handleFileChange}
                     disabled={loading}
                     className="hidden"
                   />
