@@ -171,13 +171,13 @@ export default function AllResultsPage() {
         ["Hesaplama Tarihi:", new Date(result.date).toLocaleString()],
         ["Toplam Sürücü Sayısı:", result.topsisResults.length.toString()],
         [],
-        ["Rapor İçeriği:"],
-        ["1. TOPSIS Sonuçları - Sıralama ve yakınlık katsayıları"],
-        ["2. Normalize Matris - Normalize edilmiş performans değerleri"],
-        ["3. Ağırlıklı Normalize - Ağırlıklı normalize edilmiş değerler"],
-        ["4. İdeal Çözümler - İdeal pozitif ve negatif çözümler"],
-        ["5. Uzaklıklar ve C* - Uzaklık hesaplamaları ve yakınlık katsayıları"],
-        ["6. Ham Veri - Orijinal sürücü performans verileri"]
+              ["Rapor İçeriği:"],
+      ["1. TOPSIS Sonuçları - Sıralama ve yakınlık katsayıları"],
+      ["2. Normalize Matris - Normalize edilmiş performans değerleri"],
+      ["3. Ağırlıklı Normalize - Ağırlıklı normalize edilmiş değerler"],
+      ["4. İdeal Çözümler - İdeal pozitif ve negatif çözümler"],
+      ["5. Uzaklıklar ve C Katsayısı - Uzaklık hesaplamaları ve yakınlık katsayıları"],
+      ["6. Ham Veri - Orijinal sürücü performans verileri"]
       ]
       const wsInfo = XLSX.utils.aoa_to_sheet(infoData)
 
@@ -263,15 +263,15 @@ export default function AllResultsPage() {
       }
       const wsRaw = XLSX.utils.aoa_to_sheet(rawData)
 
-      // Kitap oluştur ve sheet'leri ekle
-      const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, wsInfo, "Genel Bilgiler")
-      XLSX.utils.book_append_sheet(wb, wsResults, "TOPSIS Sonuçları")
-      XLSX.utils.book_append_sheet(wb, wsNormalize, "Normalize Matris")
-      XLSX.utils.book_append_sheet(wb, wsWeighted, "Ağırlıklı Normalize")
-      XLSX.utils.book_append_sheet(wb, wsIdeal, "İdeal Çözümler")
-      XLSX.utils.book_append_sheet(wb, wsDist, "Uzaklıklar ve C*")
-      XLSX.utils.book_append_sheet(wb, wsRaw, "Ham Veri")
+          // Kitap oluştur ve sheet'leri ekle
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, wsInfo, "Genel Bilgiler")
+    XLSX.utils.book_append_sheet(wb, wsResults, "TOPSIS Sonuçları")
+    XLSX.utils.book_append_sheet(wb, wsNormalize, "Normalize Matris")
+    XLSX.utils.book_append_sheet(wb, wsWeighted, "Ağırlıklı Normalize")
+    XLSX.utils.book_append_sheet(wb, wsIdeal, "İdeal Çözümler")
+    XLSX.utils.book_append_sheet(wb, wsDist, "Uzaklıklar ve C Katsayısı")
+    XLSX.utils.book_append_sheet(wb, wsRaw, "Ham Veri")
       
       const fileName = `TOPSIS_Tum_Asamalar_${result.evaluatorName}_${new Date(result.date).toLocaleDateString()}.xlsx`
       console.log("Dosya kaydediliyor:", fileName)
