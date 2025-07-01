@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Alert } from "@/components/ui/alert"
-import { Info } from "lucide-react"
+import { Info, Download } from "lucide-react"
 import { motion } from "framer-motion"
 import { Bar, Pie } from "react-chartjs-2"
 import * as XLSX from "xlsx"
@@ -133,6 +133,33 @@ export default function AllResultsPage() {
     }
   }
 
+  // Excel'e Aktar fonksiyonu
+  const exportToExcel = () => {
+    if (filteredSortedResults.length === 0) {
+      alert("Dışa aktarılacak veri bulunamadı.")
+      return
+    }
+    
+    const data = [
+      ["Sicil No", ...criteria.map(c => c.name), "TOPSIS Puanı (C*)", "Sıralama"]
+    ]
+    
+    filteredSortedResults.forEach(row => {
+      const rowData = [
+        row.driverId,
+        ...criteria.map(c => row.normalizedPerformance?.[c.id]?.toFixed(3) ?? "-"),
+        row.closenessCoefficient.toFixed(3),
+        row.rank.toString()
+      ]
+      data.push(rowData)
+    })
+    
+    const ws = XLSX.utils.aoa_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "TOPSIS Sonuçları")
+    XLSX.writeFile(wb, `TOPSIS_Tum_Sonuclar_${new Date().toLocaleDateString()}.xlsx`)
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-4">Tüm Sürücü Sonuçları</h1>
@@ -222,7 +249,14 @@ export default function AllResultsPage() {
         </Card>
       </div>
       {/* Tam genişlikte, sıralanabilir ve filtrelenebilir tablo */}
-      <div className="overflow-x-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">Sürücü Sıralama Tablosu</h3>
+        <Button onClick={exportToExcel} className="flex items-center gap-2">
+          <Download className="h-4 w-4" />
+          Excel'e Aktar
+        </Button>
+      </div>
+      <div className="overflow-x-auto max-h-[600px] overflow-y-auto border rounded-lg" onScroll={handleScroll}>
         <Table>
           <TableHeader>
             <TableRow>

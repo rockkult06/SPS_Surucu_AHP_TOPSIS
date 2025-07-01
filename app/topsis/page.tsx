@@ -250,11 +250,13 @@ export default function TOPSISPage() {
       
       // Sonuçları localStorage'a kaydet
       try {
-        // Sadece özet veri kaydet
+        // Hem özet hem de kriter bazlı puanları kaydet
         const summaryResults = (data.results || []).map((r: any) => ({
           driverId: r.driverId,
           closenessCoefficient: r.closenessCoefficient,
-          rank: r.rank
+          rank: r.rank,
+          // Kriter bazlı puanlar (normalizedPerformance)
+          normalizedPerformance: r.normalizedPerformance || {}
         }))
         console.log("TOPSIS kaydedilecek özet veri:", summaryResults);
         localStorage.setItem("topsisResults", JSON.stringify({ topsisResults: summaryResults }))
