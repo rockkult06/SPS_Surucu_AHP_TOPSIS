@@ -152,7 +152,7 @@ export default function AllResultsPage() {
     XLSX.writeFile(wb, `AHP_Sonucu_${result.evaluatorName}_${new Date(result.date).toLocaleDateString()}.xlsx`)
   }
 
-  const exportTopsisToExcel = (result: StoredTOPSISResult) => {
+    const exportTopsisToExcel = (result: StoredTOPSISResult) => {
     try {
       console.log("TOPSIS Excel export başlatılıyor...", result)
       
@@ -163,6 +163,16 @@ export default function AllResultsPage() {
         return
       }
 
+      // Excel sheet isimlerini güvenli hale getiren fonksiyon
+      const sanitizeSheetName = (name: string): string => {
+        return name
+          .replace(/[:\/\\?*[\]]/g, '') // Geçersiz karakterleri kaldır
+          .replace(/\(/g, '') // Parantezleri kaldır
+          .replace(/\)/g, '') // Parantezleri kaldır
+          .replace(/\*/g, '') // Yıldızları kaldır
+          .substring(0, 31) // Excel sheet ismi maksimum 31 karakter olabilir
+      }
+
       // 0. Genel Bilgiler
       const infoData = [
         ["TOPSIS Hesaplama Raporu"],
@@ -171,13 +181,13 @@ export default function AllResultsPage() {
         ["Hesaplama Tarihi:", new Date(result.date).toLocaleString()],
         ["Toplam Sürücü Sayısı:", result.topsisResults.length.toString()],
         [],
-              ["Rapor İçeriği:"],
-      ["1. TOPSIS Sonuçları - Sıralama ve yakınlık katsayıları"],
-      ["2. Normalize Matris - Normalize edilmiş performans değerleri"],
-      ["3. Ağırlıklı Normalize - Ağırlıklı normalize edilmiş değerler"],
-      ["4. İdeal Çözümler - İdeal pozitif ve negatif çözümler"],
-      ["5. Uzaklıklar ve C Katsayısı - Uzaklık hesaplamaları ve yakınlık katsayıları"],
-      ["6. Ham Veri - Orijinal sürücü performans verileri"]
+        ["Rapor İçeriği:"],
+        ["1. TOPSIS Sonuçları - Sıralama ve yakınlık katsayıları"],
+        ["2. Normalize Matris - Normalize edilmiş performans değerleri"],
+        ["3. Ağırlıklı Normalize - Ağırlıklı normalize edilmiş değerler"],
+        ["4. İdeal Çözümler - İdeal pozitif ve negatif çözümler"],
+        ["5. Uzaklıklar ve C Katsayısı - Uzaklık hesaplamaları ve yakınlık katsayıları"],
+        ["6. Ham Veri - Orijinal sürücü performans verileri"]
       ]
       const wsInfo = XLSX.utils.aoa_to_sheet(infoData)
 
@@ -263,15 +273,15 @@ export default function AllResultsPage() {
       }
       const wsRaw = XLSX.utils.aoa_to_sheet(rawData)
 
-          // Kitap oluştur ve sheet'leri ekle
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, wsInfo, "Genel Bilgiler")
-    XLSX.utils.book_append_sheet(wb, wsResults, "TOPSIS Sonuçları")
-    XLSX.utils.book_append_sheet(wb, wsNormalize, "Normalize Matris")
-    XLSX.utils.book_append_sheet(wb, wsWeighted, "Ağırlıklı Normalize")
-    XLSX.utils.book_append_sheet(wb, wsIdeal, "İdeal Çözümler")
-    XLSX.utils.book_append_sheet(wb, wsDist, "Uzaklıklar ve C Katsayısı")
-    XLSX.utils.book_append_sheet(wb, wsRaw, "Ham Veri")
+      // Kitap oluştur ve sheet'leri ekle (güvenli isimlerle)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, wsInfo, sanitizeSheetName("Genel Bilgiler"))
+      XLSX.utils.book_append_sheet(wb, wsResults, sanitizeSheetName("TOPSIS Sonuçları"))
+      XLSX.utils.book_append_sheet(wb, wsNormalize, sanitizeSheetName("Normalize Matris"))
+      XLSX.utils.book_append_sheet(wb, wsWeighted, sanitizeSheetName("Ağırlıklı Normalize"))
+      XLSX.utils.book_append_sheet(wb, wsIdeal, sanitizeSheetName("İdeal Çözümler"))
+      XLSX.utils.book_append_sheet(wb, wsDist, sanitizeSheetName("Uzaklıklar ve C Katsayısı"))
+      XLSX.utils.book_append_sheet(wb, wsRaw, sanitizeSheetName("Ham Veri"))
       
       const fileName = `TOPSIS_Tum_Asamalar_${result.evaluatorName}_${new Date(result.date).toLocaleDateString()}.xlsx`
       console.log("Dosya kaydediliyor:", fileName)
