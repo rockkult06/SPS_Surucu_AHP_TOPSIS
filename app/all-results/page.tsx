@@ -13,6 +13,7 @@ import { criteriaHierarchy, getLeafCriteria } from "@/lib/criteria-hierarchy"
 import type { TOPSISResult } from "@/lib/topsis"
 import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js"
 import { Progress } from "@/components/ui/progress"
+import { usePathname } from 'next/navigation'
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 export default function AllResultsPage() {
@@ -39,6 +40,8 @@ export default function AllResultsPage() {
   const [sortBy, setSortBy] = useState<string>("rank")
   const [sortOrder, setSortOrder] = useState<"asc"|"desc">("asc")
   const [filters, setFilters] = useState<Record<string, string>>({})
+
+  const pathname = usePathname();
 
   // Sıralama ve filtreleme uygulanmış tablo verisi
   const filteredSortedResults = useMemo(() => {
@@ -120,7 +123,7 @@ export default function AllResultsPage() {
     }
     window.addEventListener("storage", onStorage)
     return () => window.removeEventListener("storage", onStorage)
-  }, [])
+  }, [pathname])
 
   // Scroll ile daha fazla sürücü göster
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {

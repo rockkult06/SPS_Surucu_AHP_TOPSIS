@@ -273,6 +273,7 @@ export default function TOPSISPage() {
         title: "TOPSIS Analizi Başarıyla tamamlandı.",
         description: "Toplu Sonuçlar sayfasından kontrol ediniz.",
       })
+      await new Promise(r => setTimeout(r, 100));
       router.push('/all-results')
     } catch (err) {
       console.error("Error calculating TOPSIS:", err)
