@@ -75,6 +75,36 @@ export default function HierarchicalComparisonPage() {
   const [results, setResults] = useState<any>(null)
   const [criteriaDescriptions] = useState(getCriteriaDescriptions())
 
+  // Yeni değerlendirme başlatma fonksiyonu
+  const startNewEvaluation = () => {
+    // Tüm karşılaştırma verilerini temizle
+    localStorage.removeItem("hierarchicalComparisonData")
+    
+    // Hierarchy data'yı yeniden başlat
+    const freshHierarchyData = initializeHierarchyData()
+    setHierarchyData(freshHierarchyData)
+    
+    // Slider pozisyonlarını temizle
+    const freshSliderPositions: Record<string, Record<string, number>> = {
+      mainCriteria: {},
+      subCriteria: {},
+      subSubCriteria: {},
+    }
+    setSliderPositions(freshSliderPositions)
+    
+    // Genişletilmiş grupları temizle
+    setExpandedGroups({})
+    
+    // Ana tab'a dön
+    setActiveTab("main")
+    
+    // Hataları temizle
+    setError(null)
+    setResults(null)
+    
+    console.log("Yeni değerlendirme başlatıldı - tüm veriler temizlendi")
+  }
+
   useEffect(() => {
     // Load evaluator name
     const storedName = localStorage.getItem("evaluatorName")
@@ -93,17 +123,31 @@ export default function HierarchicalComparisonPage() {
       subSubCriteria: {},
     }
 
-    // Load saved comparison data if exists
-    const savedComparisons = localStorage.getItem("hierarchicalComparisonData")
-    if (savedComparisons) {
+    // Yeni değerlendirme kontrolü - sayfa her yüklendiğinde kullanıcıya sor
+    const hasExistingData = localStorage.getItem("hierarchicalComparisonData")
+    if (hasExistingData) {
+      const shouldContinue = confirm(
+        "Devam eden bir AHP değerlendirmesi bulundu. " +
+        "Devam etmek ister misiniz?\n\n" +
+        "• TAMAM: Kaldığınız yerden devam edin\n" +
+        "• İPTAL: Yeni değerlendirme başlatın"
+      )
+      
+      if (!shouldContinue) {
+        startNewEvaluation()
+        return
+      }
+      
+      // Mevcut verileri yükle
       try {
-        const data = JSON.parse(savedComparisons)
+        const data = JSON.parse(hasExistingData)
         if (data.hierarchyData && data.sliderPositions) {
           setHierarchyData(data.hierarchyData)
           setSliderPositions(data.sliderPositions)
         }
       } catch (e) {
         console.error("Error loading saved comparison data:", e)
+        startNewEvaluation()
       }
     } else {
       setSliderPositions(initialSliderPositions)
@@ -526,17 +570,36 @@ export default function HierarchicalComparisonPage() {
                 <Label htmlFor="evaluator-name" className="mb-2 block">
                   Değerlendirmeyi Yapanın Adı:
                 </Label>
-                <Input
-                  id="evaluator-name"
-                  type="text"
-                  value={evaluatorName}
-                  onChange={(e) => {
-                    setEvaluatorName(e.target.value)
-                    localStorage.setItem("evaluatorName", e.target.value)
-                  }}
-                  placeholder="Adınızı girin"
-                  className="max-w-sm"
-                />
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1">
+                    <Input
+                      id="evaluator-name"
+                      type="text"
+                      value={evaluatorName}
+                      onChange={(e) => {
+                        setEvaluatorName(e.target.value)
+                        localStorage.setItem("evaluatorName", e.target.value)
+                      }}
+                      placeholder="Adınızı girin"
+                      className="max-w-sm"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      const confirmed = confirm(
+                        "Yeni değerlendirme başlatmak istediğinizden emin misiniz?\n\n" +
+                        "Bu işlem mevcut tüm karşılaştırma verilerini silecektir."
+                      )
+                      if (confirmed) {
+                        startNewEvaluation()
+                      }
+                    }}
+                    variant="outline"
+                    className="text-red-600 border-red-300 hover:bg-red-50"
+                  >
+                    Yeni Değerlendirme Başlat
+                  </Button>
+                </div>
               </div>
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
