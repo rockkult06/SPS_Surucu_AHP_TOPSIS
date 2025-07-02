@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 export function useLocalStorage<T>(key: string, initialValue: T) {
   // State to store our value
@@ -22,7 +22,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
 
   // Return a wrapped version of useState's setter function that ...
   // ... persists the new value to localStorage.
-  const setValue = (value: T | ((val: T) => T)) => {
+  const setValue = useCallback((value: T | ((val: T) => T)) => {
     try {
       // Allow value to be a function so we have same API as useState
       const valueToStore = value instanceof Function ? value(storedValue) : value
@@ -36,13 +36,13 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
       // A more advanced implementation would handle the error case
       console.log(error)
     }
-  }
+  }, [key, storedValue])
 
   return [storedValue, setValue] as const
 }
 
 export function useLocalStorageItem(key: string) {
-  const getItem = () => {
+  const getItem = useCallback(() => {
     try {
       if (typeof window === 'undefined') return null
       return window.localStorage.getItem(key)
@@ -50,25 +50,25 @@ export function useLocalStorageItem(key: string) {
       console.error('Error reading from localStorage:', error)
       return null
     }
-  }
+  }, [key])
 
-  const setItem = (value: string) => {
+  const setItem = useCallback((value: string) => {
     try {
       if (typeof window === 'undefined') return
       window.localStorage.setItem(key, value)
     } catch (error) {
       console.error('Error writing to localStorage:', error)
     }
-  }
+  }, [key])
 
-  const removeItem = () => {
+  const removeItem = useCallback(() => {
     try {
       if (typeof window === 'undefined') return
       window.localStorage.removeItem(key)
     } catch (error) {
       console.error('Error removing from localStorage:', error)
     }
-  }
+  }, [key])
 
   return { getItem, setItem, removeItem }
 } 

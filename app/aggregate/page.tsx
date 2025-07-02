@@ -134,7 +134,9 @@ export default function AggregateWeightsPage() {
       isOverallConsistent: true
     }
 
-    localStorage.setItem("ahpResults", JSON.stringify(avgResults))
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("ahpResults", JSON.stringify(avgResults))
+    }
     alert("Ortalama ağırlıklar TOPSIS için kaydedildi!")
   }
 

@@ -115,7 +115,7 @@ export default function HierarchicalComparisonPage() {
 
     setTotalComparisons(total)
     setCompletedComparisons(0)
-  }, [showNameInput, hierarchyData, removeComparisonData])
+  }, [showNameInput, hierarchyData])
 
   // Kullanıcı adı giriş formu
   if (showNameInput) {
@@ -206,13 +206,15 @@ export default function HierarchicalComparisonPage() {
   }
 
   const saveComparisonData = (data: any, positions: Record<string, number>) => {
-    localStorage.setItem(
-      "hierarchicalComparisonData",
-      JSON.stringify({
-        hierarchyData: data,
-        sliderPositions: positions,
-      }),
-    )
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(
+        "hierarchicalComparisonData",
+        JSON.stringify({
+          hierarchyData: data,
+          sliderPositions: positions,
+        })
+      )
+    }
   }
 
   const getSliderPosition = (level: string, parentId: string | null, row: number, col: number) => {
@@ -365,37 +367,34 @@ export default function HierarchicalComparisonPage() {
       setResults(results)
 
       // Store results in localStorage
-      if (results) {
-        const resultData = {
-          ...results,
-          evaluatorName,
-          date: new Date().toISOString(),
-          criteriaMap: hierarchyData.criteriaMap,
-        }
-        
+      if (typeof window !== 'undefined') {
         localStorage.setItem(
-          "ahpResults", // Changed to ahpResults for consistency with results page
-          JSON.stringify(resultData),
-        )
-
-        // Veritabanına da kaydet
-        fetch('/api/ahp-evaluations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            evaluatorName,
-            globalWeights: results.globalWeights,
+          "ahpResults",
+          JSON.stringify({
+            ...results,
+            evaluatorName: evaluatorName,
             date: new Date().toISOString(),
-            mainCR: results.mainCR,
-            isOverallConsistent: results.isOverallConsistent
           })
-        }).catch(error => {
-          console.error('Veritabanına kaydetme hatası:', error)
-          // Hata olsa da devam et, localStorage zaten var
-        })
+        )
       }
+
+      // Veritabanına da kaydet
+      fetch('/api/ahp-evaluations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          evaluatorName,
+          globalWeights: results.globalWeights,
+          date: new Date().toISOString(),
+          mainCR: results.mainCR,
+          isOverallConsistent: results.isOverallConsistent
+        })
+      }).catch(error => {
+        console.error('Veritabanına kaydetme hatası:', error)
+        // Hata olsa da devam et, localStorage zaten var
+      })
 
       // Navigate to results page
       router.push("/results")

@@ -71,78 +71,65 @@ export default function AllResultsPage() {
     setCriteria(leaf.map(c => ({ id: c.id, name: c.name })))
 
     // TOPSIS sonuçlarını localStorage'dan çek - sadece storage event ile
-    const loadTopsis = () => {
-      const stored = localStorage.getItem("topsisResults")
-      console.log("Loading TOPSIS results from localStorage:", stored ? "Data found" : "No data")
-      if (stored) {
-        try {
-          const last = JSON.parse(stored)
-          console.log("Parsed TOPSIS data:", last)
-          if (last && last.topsisResults) {
-            console.log("Setting TOPSIS results, count:", last.topsisResults.length)
-            setTopsisResults(last.topsisResults)
-            // KPI hesapla
-            const cArr = last.topsisResults.map((r: any) => r.closenessCoefficient)
-            const avgC = cArr.reduce((a: number, b: number) => a + b, 0) / (cArr.length || 1)
-            const maxC = Math.max(...cArr)
-            const minC = Math.min(...cArr)
-            const stdC = Math.sqrt(cArr.reduce((a: number, b: number) => a + Math.pow(b-avgC,2), 0) / (cArr.length || 1))
-            const excellentCount = cArr.filter((c: number) => c > avgC + 2*stdC).length
-            const below1StdCount = cArr.filter((c: number) => c < avgC - stdC).length
-            const below2StdCount = cArr.filter((c: number) => c < avgC - 2*stdC).length
-            setKpi({
-              totalDrivers: cArr.length,
-              avgC,
-              maxC,
-              minC,
-              stdC,
-              excellentCount,
-              below1StdCount,
-              below2StdCount,
-            })
-            // Kriter istatistikleri hesapla
-            if (last.topsisResults.length > 0 && leaf.length > 0) {
-              const stats = leaf.map(c => {
-                const vals = last.topsisResults.map((r: any) => r.normalizedPerformance?.[c.id] ?? 0)
-                const avg = vals.reduce((a: number, b: number) => a + b, 0) / vals.length
-                const min = Math.min(...vals)
-                const max = Math.max(...vals)
-                const std = Math.sqrt(vals.reduce((a: number, b: number) => a + Math.pow(b-avg,2), 0) / vals.length)
-                return { id: c.id, name: c.name, avg, min, max, std }
-              })
-              setCriteriaStats(stats)
-              // Histogram (C* dağılımı)
-              const bins = Array(10).fill(0)
-              cArr.forEach((val: number) => {
-                const idx = Math.min(9, Math.floor(val * 10))
-                bins[idx]++
-              })
-              setHistogramData({
-                labels: bins.map((_: any, i: number) => `${(i/10).toFixed(1)}–${((i+1)/10).toFixed(1)}`),
-                counts: bins
-              })
-            }
-          } else {
-            console.log("No topsisResults found in parsed data")
-          }
-        } catch (e) {
-          console.error("Error loading TOPSIS results:", e)
+    if (typeof window === 'undefined') return
+    
+    const stored = localStorage.getItem("topsisResults")
+    console.log("Loading TOPSIS results from localStorage:", stored ? "Data found" : "No data")
+    if (stored) {
+      try {
+        const parsedResults = JSON.parse(stored)
+        setTopsisResults(parsedResults)
+        setEvaluatorName(parsedResults.evaluatorName || "Bilinmiyor")
+        setCalculationDate(parsedResults.date ? new Date(parsedResults.date).toLocaleString() : "Bilinmiyor")
+        // KPI hesapla
+        const cArr = parsedResults.topsisResults.map((r: any) => r.closenessCoefficient)
+        const avgC = cArr.reduce((a: number, b: number) => a + b, 0) / (cArr.length || 1)
+        const maxC = Math.max(...cArr)
+        const minC = Math.min(...cArr)
+        const stdC = Math.sqrt(cArr.reduce((a: number, b: number) => a + Math.pow(b-avgC,2), 0) / (cArr.length || 1))
+        const excellentCount = cArr.filter((c: number) => c > avgC + 2*stdC).length
+        const below1StdCount = cArr.filter((c: number) => c < avgC - stdC).length
+        const below2StdCount = cArr.filter((c: number) => c < avgC - 2*stdC).length
+        setKpi({
+          totalDrivers: cArr.length,
+          avgC,
+          maxC,
+          minC,
+          stdC,
+          excellentCount,
+          below1StdCount,
+          below2StdCount,
+        })
+        // Kriter istatistikleri hesapla
+        if (parsedResults.topsisResults.length > 0 && leaf.length > 0) {
+          const stats = leaf.map(c => {
+            const vals = parsedResults.topsisResults.map((r: any) => r.normalizedPerformance?.[c.id] ?? 0)
+            const avg = vals.reduce((a: number, b: number) => a + b, 0) / vals.length
+            const min = Math.min(...vals)
+            const max = Math.max(...vals)
+            const std = Math.sqrt(vals.reduce((a: number, b: number) => a + Math.pow(b-avg,2), 0) / vals.length)
+            return { id: c.id, name: c.name, avg, min, max, std }
+          })
+          setCriteriaStats(stats)
+          // Histogram (C* dağılımı)
+          const bins = Array(10).fill(0)
+          cArr.forEach((val: number) => {
+            const idx = Math.min(9, Math.floor(val * 10))
+            bins[idx]++
+          })
+          setHistogramData({
+            labels: bins.map((_: any, i: number) => `${(i/10).toFixed(1)}–${((i+1)/10).toFixed(1)}`),
+            counts: bins
+          })
         }
+      } catch (e) {
+        console.error("Error parsing TOPSIS results from localStorage:", e)
+        setError("Kaydedilmiş TOPSIS sonuçları yüklenirken bir hata oluştu.")
       }
+    } else {
+      setError("Henüz hesaplanmış bir TOPSIS sonucu bulunmamaktadır.")
     }
-
-    // İlk yükleme
-    loadTopsis();
-
-    // Storage event ile güncelle (TOPSIS hesaplaması tamamlandığında)
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "topsisResults") {
-        loadTopsis()
-      }
-    }
-    window.addEventListener("storage", onStorage)
-    return () => window.removeEventListener("storage", onStorage)
-  }, [pathname])
+  }, [])
 
   // Scroll ile daha fazla sürücü göster
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -194,7 +181,9 @@ export default function AllResultsPage() {
     })
     setCriteriaStats([])
     setHistogramData({labels: [], counts: []})
-    localStorage.removeItem("topsisResults")
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem("topsisResults")
+    }
     setVisibleCount(20)
     setSortBy("rank")
     setSortOrder("asc")

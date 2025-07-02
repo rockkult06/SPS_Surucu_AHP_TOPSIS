@@ -21,9 +21,11 @@ export default function Home() {
 
   useEffect(() => {
     // Check if there's a stored name
-    const storedName = localStorage.getItem("evaluatorName")
-    if (storedName) {
-      setEvaluatorName(storedName)
+    if (typeof window !== 'undefined') {
+      const storedName = localStorage.getItem("evaluatorName")
+      if (storedName) {
+        setEvaluatorName(storedName)
+      }
     }
   }, [])
 
@@ -34,7 +36,9 @@ export default function Home() {
     }
 
     // Store evaluator name in localStorage
-    localStorage.setItem("evaluatorName", evaluatorName)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("evaluatorName", evaluatorName)
+    }
 
     // Navigate to comparison page
     router.push("/comparison")

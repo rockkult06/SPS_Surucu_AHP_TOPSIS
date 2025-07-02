@@ -71,7 +71,7 @@ export default function TOPSISPage() {
     }
 
     setEvaluations(allEvaluations)
-  }, [getAhpEvaluations, getHierarchicalEvaluations])
+  }, [])
 
   // Seçilen değerlendirmelerin ortalama ağırlıklarını hesapla
   useEffect(() => {
@@ -297,20 +297,9 @@ export default function TOPSISPage() {
       }
       
       // Sonuçları localStorage'a kaydet
-      try {
-        // Hem özet hem de kriter bazlı puanları kaydet
-        const summaryResults = (data.results || []).map((r: any) => ({
-          driverId: r.driverId,
-          closenessCoefficient: r.closenessCoefficient,
-          rank: r.rank,
-          // Kriter bazlı puanlar (normalizedPerformance)
-          normalizedPerformance: r.normalizedPerformance || {}
-        }))
-        console.log("TOPSIS kaydedilecek özet veri:", summaryResults);
-        localStorage.setItem("topsisResults", JSON.stringify({ topsisResults: summaryResults }))
-        console.log("localStorage sonrası:", JSON.parse(localStorage.getItem("topsisResults")));
-      } catch (e) {
-        console.error("TOPSIS sonucu kaydedilemedi:", e)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem("topsisResults", JSON.stringify({ topsisResults: data.results || [] }))
+        console.log("localStorage sonrası:", JSON.parse(localStorage.getItem("topsisResults") || "{}"))
       }
       // Başarılı bildirim ve yönlendirme
       toast({

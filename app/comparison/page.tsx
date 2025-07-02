@@ -132,7 +132,7 @@ export default function ComparisonPage() {
 
     setTotalComparisons(total)
     setCompletedComparisons(0)
-  }, [showNameInput, hierarchyData, removeComparisonData])
+  }, [showNameInput, hierarchyData])
 
   useEffect(() => {
     // Update progress when completed comparisons change
@@ -199,13 +199,15 @@ export default function ComparisonPage() {
   }
 
   const saveComparisonData = (data: any, positions: Record<string, number>) => {
-    localStorage.setItem(
-      "hierarchicalComparisonData",
-      JSON.stringify({
-        hierarchyData: data,
-        sliderPositions: positions,
-      }),
-    )
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(
+        "hierarchicalComparisonData",
+        JSON.stringify({
+          hierarchyData: data,
+          sliderPositions: positions,
+        })
+      )
+    }
   }
 
   const validateHierarchy = () => {
@@ -314,7 +316,9 @@ export default function ComparisonPage() {
       console.log("AHP calculation response:", JSON.stringify(data, null, 2))
 
       // Store results in localStorage to pass to results page
-      localStorage.setItem("ahpResults", JSON.stringify(data))
+      if (typeof window !== 'undefined') {
+        localStorage.setItem("ahpResults", JSON.stringify(data))
+      }
 
       // Navigate to results page
       router.push("/results")
