@@ -78,6 +78,8 @@ export default function TOPSISPage() {
     if (selectedEvaluations.length === 0) {
       setAhpWeights({})
       setHasAhpWeights(false)
+      setSelectedCriteria([])
+      setCriteriaTypes({})
       return
     }
 
@@ -99,13 +101,16 @@ export default function TOPSISPage() {
 
     setAhpWeights(avgWeights)
     setHasAhpWeights(true)
-    setSelectedCriteria(Object.keys(avgWeights))
 
     // Kriter tiplerini ayarla
     const initialTypes: Record<string, boolean> = {}
-    Object.keys(avgWeights).forEach((id) => {
+    const criteriaKeys = Object.keys(avgWeights)
+    
+    criteriaKeys.forEach((id) => {
       initialTypes[id] = getCriteriaBenefitType(id) || false
     })
+    
+    setSelectedCriteria(criteriaKeys)
     setCriteriaTypes(initialTypes)
     setError(null)
   }, [selectedEvaluations, evaluations, leafCriteria])
