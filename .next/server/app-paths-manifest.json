@@ -1,1 +1,14 @@
-{}
+{
+  "/_not-found": "app/_not-found.js",
+  "/aggregate/page": "app/aggregate/page.js",
+  "/all-results/page": "app/all-results/page.js",
+  "/api/ahp-evaluations/route": "app/api/ahp-evaluations/route.js",
+  "/api/calculate-ahp/route": "app/api/calculate-ahp/route.js",
+  "/api/topsis/route": "app/api/topsis/route.js",
+  "/comparison/page": "app/comparison/page.js",
+  "/help/page": "app/help/page.js",
+  "/hierarchical-comparison/page": "app/hierarchical-comparison/page.js",
+  "/page": "app/page.js",
+  "/results/page": "app/results/page.js",
+  "/topsis/page": "app/topsis/page.js"
+}
