@@ -67,7 +67,7 @@ export default function AllResultsPage() {
     // Kriterleri çek
     const leaf = getLeafCriteria()
     setCriteria(leaf.map(c => ({ id: c.id, name: c.name })))
-    
+
     // TOPSIS sonuçlarını localStorage'dan çek - sadece storage event ile
     const loadTopsis = () => {
       const stored = localStorage.getItem("topsisResults")
@@ -124,10 +124,10 @@ export default function AllResultsPage() {
         }
       }
     }
-    
-    // İlk yükleme - localStorage'dan otomatik yükleme yok
-    // loadTopsis() - Bu satırı kaldırdık
-    
+
+    // İlk yükleme
+    loadTopsis();
+
     // Storage event ile güncelle (TOPSIS hesaplaması tamamlandığında)
     const onStorage = (e: StorageEvent) => {
       if (e.key === "topsisResults") {
