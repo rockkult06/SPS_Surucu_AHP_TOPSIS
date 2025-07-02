@@ -112,46 +112,8 @@ export default function HierarchicalComparisonPage() {
       setEvaluatorName(storedName)
     }
 
-    // Initialize hierarchy data
-    const initialData = initializeHierarchyData()
-    setHierarchyData(initialData)
-
-    // Initialize slider positions
-    const initialSliderPositions: Record<string, Record<string, number>> = {
-      mainCriteria: {},
-      subCriteria: {},
-      subSubCriteria: {},
-    }
-
-    // Yeni değerlendirme kontrolü - sayfa her yüklendiğinde kullanıcıya sor
-    const hasExistingData = localStorage.getItem("hierarchicalComparisonData")
-    if (hasExistingData) {
-      const shouldContinue = confirm(
-        "Devam eden bir AHP değerlendirmesi bulundu. " +
-        "Devam etmek ister misiniz?\n\n" +
-        "• TAMAM: Kaldığınız yerden devam edin\n" +
-        "• İPTAL: Yeni değerlendirme başlatın"
-      )
-      
-      if (!shouldContinue) {
-        startNewEvaluation()
-        return
-      }
-      
-      // Mevcut verileri yükle
-      try {
-        const data = JSON.parse(hasExistingData)
-        if (data.hierarchyData && data.sliderPositions) {
-          setHierarchyData(data.hierarchyData)
-          setSliderPositions(data.sliderPositions)
-        }
-      } catch (e) {
-        console.error("Error loading saved comparison data:", e)
-        startNewEvaluation()
-      }
-    } else {
-      setSliderPositions(initialSliderPositions)
-    }
+    // Her sayfa yüklendiğinde yeni değerlendirme başlat
+    startNewEvaluation()
   }, [])
 
   const handleSliderChange = (level: string, parentId: string | null, row: number, col: number, position: number) => {

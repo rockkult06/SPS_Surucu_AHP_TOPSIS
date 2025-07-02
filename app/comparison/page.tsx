@@ -58,19 +58,8 @@ export default function ComparisonPage() {
       setEvaluatorName(storedName)
     }
 
-    // Load saved comparison data if exists
-    const savedComparisons = localStorage.getItem("hierarchicalComparisonData")
-    if (savedComparisons) {
-      try {
-        const data = JSON.parse(savedComparisons)
-        if (data.hierarchyData && data.sliderPositions) {
-          setHierarchyData(data.hierarchyData)
-          setSliderPositions(data.sliderPositions)
-        }
-      } catch (e) {
-        console.error("Error loading saved comparison data:", e)
-      }
-    }
+    // Önceki karşılaştırma verilerini temizle
+    localStorage.removeItem("hierarchicalComparisonData")
 
     // Calculate total number of comparisons needed
     let total = 0
@@ -98,7 +87,7 @@ export default function ComparisonPage() {
     })
 
     setTotalComparisons(total)
-    setCompletedComparisons(Object.keys(sliderPositions).length)
+    setCompletedComparisons(0)
   }, [])
 
   useEffect(() => {
