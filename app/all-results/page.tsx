@@ -67,62 +67,6 @@ export default function AllResultsPage() {
     // Kriterleri çek
     const leaf = getLeafCriteria()
     setCriteria(leaf.map(c => ({ id: c.id, name: c.name })))
-    // TOPSIS sonuçlarını localStorage'dan çek
-    const loadTopsis = () => {
-      const stored = localStorage.getItem("topsisResults")
-      if (stored) {
-        try {
-          const last = JSON.parse(stored)
-          if (last && last.topsisResults) {
-            setTopsisResults(last.topsisResults)
-            // KPI hesapla
-            const cArr = last.topsisResults.map((r: any) => r.closenessCoefficient)
-            const avgC = cArr.reduce((a: number, b: number) => a + b, 0) / (cArr.length || 1)
-            const maxC = Math.max(...cArr)
-            const minC = Math.min(...cArr)
-            const stdC = Math.sqrt(cArr.reduce((a: number, b: number) => a + Math.pow(b-avgC,2), 0) / (cArr.length || 1))
-            const excellentCount = cArr.filter((c: number) => c >= 0.9).length
-            setKpi({
-              totalDrivers: cArr.length,
-              avgC,
-              maxC,
-              minC,
-              stdC,
-              excellentCount,
-            })
-            // Kriter istatistikleri hesapla
-            if (last.topsisResults.length > 0 && leaf.length > 0) {
-              const stats = leaf.map(c => {
-                const vals = last.topsisResults.map((r: any) => r.normalizedPerformance?.[c.id] ?? 0)
-                const avg = vals.reduce((a: number, b: number) => a + b, 0) / vals.length
-                const min = Math.min(...vals)
-                const max = Math.max(...vals)
-                const std = Math.sqrt(vals.reduce((a: number, b: number) => a + Math.pow(b-avg,2), 0) / vals.length)
-                return { id: c.id, name: c.name, avg, min, max, std }
-              })
-              setCriteriaStats(stats)
-              // Histogram (C* dağılımı)
-              const bins = Array(10).fill(0)
-              cArr.forEach((val: number) => {
-                const idx = Math.min(9, Math.floor(val * 10))
-                bins[idx]++
-              })
-              setHistogramData({
-                labels: bins.map((_: any, i: number) => `${(i/10).toFixed(1)}–${((i+1)/10).toFixed(1)}`),
-                counts: bins
-              })
-            }
-          }
-        } catch {}
-      }
-    }
-    loadTopsis()
-    // Storage event ile güncelle
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "topsisResults") loadTopsis()
-    }
-    window.addEventListener("storage", onStorage)
-    return () => window.removeEventListener("storage", onStorage)
   }, [pathname])
 
   // Scroll ile daha fazla sürücü göster
