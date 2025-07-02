@@ -29,6 +29,8 @@ export default function AllResultsPage() {
     minC: 0,
     stdC: 0,
     excellentCount: 0,
+    below1StdCount: 0, // 1 std altı
+    below2StdCount: 0, // 2 std altı
   })
 
   // Kriter bazlı istatistikler
@@ -86,6 +88,8 @@ export default function AllResultsPage() {
             const minC = Math.min(...cArr)
             const stdC = Math.sqrt(cArr.reduce((a: number, b: number) => a + Math.pow(b-avgC,2), 0) / (cArr.length || 1))
             const excellentCount = cArr.filter((c: number) => c >= 0.9).length
+            const below1StdCount = cArr.filter((c: number) => c < avgC - stdC).length
+            const below2StdCount = cArr.filter((c: number) => c < avgC - 2*stdC).length
             setKpi({
               totalDrivers: cArr.length,
               avgC,
@@ -93,6 +97,8 @@ export default function AllResultsPage() {
               minC,
               stdC,
               excellentCount,
+              below1StdCount,
+              below2StdCount,
             })
             // Kriter istatistikleri hesapla
             if (last.topsisResults.length > 0 && leaf.length > 0) {
@@ -183,6 +189,8 @@ export default function AllResultsPage() {
       minC: 0,
       stdC: 0,
       excellentCount: 0,
+      below1StdCount: 0,
+      below2StdCount: 0,
     })
     setCriteriaStats([])
     setHistogramData({labels: [], counts: []})
@@ -213,7 +221,7 @@ export default function AllResultsPage() {
       ) : (
         <>
           {/* KPI Kartları */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
             <Card>
               <CardHeader>
                 <CardTitle>Toplam Sürücü Sayısı</CardTitle>
@@ -236,6 +244,30 @@ export default function AllResultsPage() {
               </CardHeader>
               <CardContent>
                 <span className="text-2xl font-bold">{kpi.excellentCount}</span>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Standart Sapma</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <span className="text-2xl font-bold">{kpi.stdC.toFixed(3)}</span>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>1 Std. Altı Sürücü</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <span className="text-2xl font-bold">{kpi.below1StdCount}</span>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>2 Std. Altı Sürücü</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <span className="text-2xl font-bold">{kpi.below2StdCount}</span>
               </CardContent>
             </Card>
           </div>
