@@ -11,6 +11,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { criteriaHierarchy, getCriteriaDescriptions, initializeHierarchyData } from "@/lib/criteria-hierarchy"
 import type { JSX } from "react/jsx-runtime"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 
 // Saaty scale values and their corresponding numeric values
 const saatyValues = [
@@ -46,10 +48,52 @@ export default function ComparisonPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [evaluatorName, setEvaluatorName] = useState("")
+  const [showNameInput, setShowNameInput] = useState(true)
   const [progress, setProgress] = useState(0)
   const [totalComparisons, setTotalComparisons] = useState(0)
   const [completedComparisons, setCompletedComparisons] = useState(0)
   const [criteriaDescriptions] = useState(getCriteriaDescriptions())
+
+  // Kullanıcı adı giriş formu
+  if (showNameInput) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-lg">
+        <Card className="card-shadow overflow-hidden border-0">
+          <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-primary-foreground py-8">
+            <CardTitle className="text-2xl font-bold">AHP Değerlendirmesi</CardTitle>
+            <CardDescription className="text-primary-foreground/90">
+              Lütfen değerlendirmeyi yapmak için adınızı girin.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-8">
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              if (evaluatorName.trim()) {
+                localStorage.setItem("evaluatorName", evaluatorName.trim())
+                setShowNameInput(false)
+              }
+            }}>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="evaluatorName">Adınız</Label>
+                  <Input
+                    id="evaluatorName"
+                    placeholder="Adınızı girin"
+                    value={evaluatorName}
+                    onChange={(e) => setEvaluatorName(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full">
+                  Değerlendirmeye Başla
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   useEffect(() => {
     // Load evaluator name

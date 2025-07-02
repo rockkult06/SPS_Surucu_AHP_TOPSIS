@@ -29,55 +29,82 @@ export default function TOPSISPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [selectedCriteria, setSelectedCriteria] = useState<string[]>([])
-  const [criteriaTypes, setCriteriaTypes] = useState<Record<string, boolean>>({}) // true for benefit, false for cost
+  const [criteriaTypes, setCriteriaTypes] = useState<Record<string, boolean>>({})
   const [useDefaultWeights, setUseDefaultWeights] = useState(false)
   const [hasAhpWeights, setHasAhpWeights] = useState(false)
   const [selectedFileName, setSelectedFileName] = useState("")
+  const [evaluations, setEvaluations] = useState<any[]>([])
+  const [selectedEvaluations, setSelectedEvaluations] = useState<string[]>([])
   const { toast } = useToast()
   const router = useRouter()
 
   const leafCriteria = useMemo(() => getLeafCriteria(), [])
   const excelColumnMappings = useMemo(() => getExcelColumnMappings(), [])
 
+  // AHP değerlendirmelerini yükle
   useEffect(() => {
-    // Load AHP weights from localStorage
-    const storedAhpResults = localStorage.getItem("ahpResults")
-    if (storedAhpResults) {
+    const loadEvaluations = async () => {
       try {
-        const parsedResults = JSON.parse(storedAhpResults)
-        if (parsedResults.globalWeights) {
-          setAhpWeights(parsedResults.globalWeights)
-          setHasAhpWeights(true)
-          // Initialize selected criteria and types based on AHP weights
-          const initialSelected = Object.keys(parsedResults.globalWeights)
-          setSelectedCriteria(initialSelected)
-
-          const initialTypes: Record<string, boolean> = {}
-          initialSelected.forEach((id) => {
-            initialTypes[id] = getCriteriaBenefitType(id) || false // Default to cost if not specified
-          })
-          setCriteriaTypes(initialTypes)
-          setError(null) // Clear any previous errors
+        const response = await fetch('/api/ahp-evaluations')
+        if (response.ok) {
+          const data = await response.json()
+          setEvaluations(data.evaluations || [])
         }
-      } catch (e) {
-        console.error("Error loading AHP weights from localStorage:", e)
-        setError("AHP ağırlıkları yüklenirken bir hata oluştu.")
-        setHasAhpWeights(false)
+      } catch (error) {
+        console.error('AHP değerlendirmeleri yüklenirken hata:', error)
       }
-    } else {
-      setHasAhpWeights(false)
-      // Initialize with all criteria for default weights option
-      const allCriteriaIds = leafCriteria.map(c => c.id)
-      setSelectedCriteria(allCriteriaIds)
-      
-      const initialTypes: Record<string, boolean> = {}
-      allCriteriaIds.forEach((id) => {
-        initialTypes[id] = getCriteriaBenefitType(id) || false
-      })
-      setCriteriaTypes(initialTypes)
-      setError("AHP değerlendirmesi bulunamadı. Varsayılan eşit ağırlıkları kullanabilirsiniz.")
     }
-  }, [leafCriteria])
+    loadEvaluations()
+  }, [])
+
+  // Seçilen değerlendirmelerin ortalama ağırlıklarını hesapla
+  useEffect(() => {
+    if (selectedEvaluations.length === 0) {
+      setAhpWeights({})
+      setHasAhpWeights(false)
+      return
+    }
+
+    const selectedEvals = evaluations.filter(evaluation => selectedEvaluations.includes(evaluation.id))
+    if (selectedEvals.length === 0) return
+
+    const avgWeights: Record<string, number> = {}
+    
+    // Her kriter için ortalama hesapla
+    leafCriteria.forEach(criterion => {
+      const weights = selectedEvals
+        .map(evaluation => evaluation.globalWeights[criterion.id] || 0)
+        .filter(weight => weight > 0)
+      
+      if (weights.length > 0) {
+        avgWeights[criterion.id] = weights.reduce((sum, weight) => sum + weight, 0) / weights.length
+      }
+    })
+
+    setAhpWeights(avgWeights)
+    setHasAhpWeights(true)
+    setSelectedCriteria(Object.keys(avgWeights))
+
+    // Kriter tiplerini ayarla
+    const initialTypes: Record<string, boolean> = {}
+    Object.keys(avgWeights).forEach((id) => {
+      initialTypes[id] = getCriteriaBenefitType(id) || false
+    })
+    setCriteriaTypes(initialTypes)
+    setError(null)
+  }, [selectedEvaluations, evaluations, leafCriteria])
+
+  const handleEvaluationToggle = (evaluationId: string, checked: boolean) => {
+    setSelectedEvaluations(prev => 
+      checked 
+        ? [...prev, evaluationId]
+        : prev.filter(id => id !== evaluationId)
+    )
+  }
+
+  const handleSelectAllEvaluations = (checked: boolean) => {
+    setSelectedEvaluations(checked ? evaluations.map(evaluation => evaluation.id) : [])
+  }
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -434,21 +461,91 @@ export default function TOPSISPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="max-w-5xl mx-auto"
-      >
-        <Card className="card-shadow overflow-hidden border-0">
-          <CardHeader className="bg-gradient-to-r from-primary/90 to-primary text-primary-foreground py-8">
-            <CardTitle className="text-2xl font-bold">TOPSIS ile Sürücü Sıralaması</CardTitle>
-            <CardDescription className="text-primary-foreground/90">
-              Sürücü verilerini yükleyin ve AHP ağırlıklarını kullanarak TOPSIS sıralamasını hesaplayın.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-8">
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <Card className="card-shadow overflow-hidden border-0 mb-8">
+        <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-primary-foreground py-8">
+          <CardTitle className="text-2xl font-bold">TOPSIS Analizi</CardTitle>
+          <CardDescription className="text-primary-foreground/90">
+            Sürücü verilerini yükleyin ve TOPSIS analizi yapın.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-8">
+          {/* AHP Değerlendirmeleri Seçimi */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold mb-4">AHP Ağırlıkları</h3>
+            {evaluations.length === 0 ? (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>AHP Değerlendirmesi Bulunamadı</AlertTitle>
+                <AlertDescription>
+                  Lütfen önce AHP değerlendirmesi yapın veya varsayılan eşit ağırlıkları kullanın.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <div className="space-x-2">
+                    <Button onClick={() => handleSelectAllEvaluations(true)} variant="outline" size="sm">
+                      Tümünü Seç
+                    </Button>
+                    <Button onClick={() => handleSelectAllEvaluations(false)} variant="outline" size="sm">
+                      Seçimi Temizle
+                    </Button>
+                  </div>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">Seç</TableHead>
+                      <TableHead>Değerlendirici</TableHead>
+                      <TableHead>Tarih</TableHead>
+                      <TableHead>Tutarlılık (CR)</TableHead>
+                      <TableHead>Tutarlı mı?</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {evaluations.map(evaluation => (
+                      <TableRow key={evaluation.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedEvaluations.includes(evaluation.id)}
+                            onCheckedChange={(checked) => handleEvaluationToggle(evaluation.id, checked as boolean)}
+                          />
+                        </TableCell>
+                        <TableCell>{evaluation.evaluatorName}</TableCell>
+                        <TableCell>{new Date(evaluation.date).toLocaleDateString('tr-TR')}</TableCell>
+                        <TableCell>{evaluation.mainCR.toFixed(4)}</TableCell>
+                        <TableCell>
+                          {evaluation.isOverallConsistent ? (
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <AlertCircle className="h-5 w-5 text-red-500" />
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </>
+            )}
+            <div className="mt-4">
+              <Label className="flex items-center space-x-2">
+                <Checkbox
+                  checked={useDefaultWeights}
+                  onCheckedChange={(checked) => {
+                    setUseDefaultWeights(checked as boolean)
+                    if (checked) {
+                      setSelectedEvaluations([])
+                    }
+                  }}
+                />
+                <span>Varsayılan eşit ağırlıkları kullan</span>
+              </Label>
+            </div>
+          </div>
+
+          {/* Mevcut içerik */}
+          <div className="space-y-8">
             {error && (
               <Alert variant="destructive" className="mb-6 rounded-xl">
                 <AlertCircle className="h-4 w-4" />
@@ -672,9 +769,9 @@ export default function TOPSISPage() {
             <Button onClick={exportToExcel} className="mt-8 w-full bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg">
               <Download className="h-4 w-4 mr-2" /> TOPSIS ve AHP Sonuçlarını Excel'e Aktar
             </Button>
-          </CardContent>
-        </Card>
-      </motion.div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
