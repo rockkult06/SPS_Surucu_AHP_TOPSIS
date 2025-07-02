@@ -97,19 +97,24 @@ export default function ComparisonPage() {
     )
   }
 
+  // İlk yükleme ve kullanıcı adı kontrolü
   useEffect(() => {
+    if (typeof window === 'undefined') return
+
     // Load evaluator name
-    if (typeof window !== 'undefined') {
-      const storedName = localStorage.getItem("evaluatorName")
-      if (storedName) {
-        setEvaluatorName(storedName)
-      }
+    const storedName = localStorage.getItem("evaluatorName")
+    if (storedName) {
+      setEvaluatorName(storedName)
     }
+  }, [])
+
+  // Karşılaştırma verilerini temizle ve toplam karşılaştırma sayısını hesapla
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (showNameInput) return // Kullanıcı adı girilmediyse işlem yapma
 
     // Önceki karşılaştırma verilerini temizle
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem("hierarchicalComparisonData")
-    }
+    localStorage.removeItem("hierarchicalComparisonData")
 
     // Calculate total number of comparisons needed
     let total = 0
@@ -138,7 +143,7 @@ export default function ComparisonPage() {
 
     setTotalComparisons(total)
     setCompletedComparisons(0)
-  }, [])
+  }, [showNameInput, hierarchyData])
 
   useEffect(() => {
     // Update progress when completed comparisons change

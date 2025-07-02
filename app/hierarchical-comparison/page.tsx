@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -76,30 +76,63 @@ export default function HierarchicalComparisonPage() {
   const [results, setResults] = useState<any>(null)
   const [criteriaDescriptions] = useState(getCriteriaDescriptions())
 
-  useEffect(() => {
-    // Load evaluator name
+  // Yeni değerlendirme başlatma fonksiyonu
+  const startNewEvaluation = useCallback(() => {
+    // Tüm karşılaştırma verilerini temizle
     if (typeof window !== 'undefined') {
-      const storedName = localStorage.getItem("evaluatorName")
-      if (storedName) {
-        setEvaluatorName(storedName)
-      }
+      localStorage.removeItem("hierarchicalComparisonData")
     }
-
-    // Initialize hierarchy data
-    const initialData = initializeHierarchyData()
-    setHierarchyData(initialData)
-
-    // Initialize slider positions
-    const initialSliderPositions: Record<string, Record<string, number>> = {
+    
+    // Hierarchy data'yı yeniden başlat
+    const freshHierarchyData = initializeHierarchyData()
+    setHierarchyData(freshHierarchyData)
+    
+    // Slider pozisyonlarını temizle
+    const freshSliderPositions: Record<string, Record<string, number>> = {
       mainCriteria: {},
       subCriteria: {},
       subSubCriteria: {},
     }
+    setSliderPositions(freshSliderPositions)
+    
+    // Genişletilmiş grupları temizle
+    setExpandedGroups({})
+    
+    // Ana tab'a dön
+    setActiveTab("main")
+    
+    // Hataları temizle
+    setError(null)
+    setResults(null)
+    
+    console.log("Yeni değerlendirme başlatıldı - tüm veriler temizlendi")
+  }, [])
 
-    // Yeni değerlendirme kontrolü - sayfa her yüklendiğinde kullanıcıya sor
-    if (typeof window !== 'undefined') {
-      const hasExistingData = localStorage.getItem("hierarchicalComparisonData")
-      if (hasExistingData) {
+  // İlk yükleme ve kullanıcı adı kontrolü
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    // Load evaluator name
+    const storedName = localStorage.getItem("evaluatorName")
+    if (storedName) {
+      setEvaluatorName(storedName)
+    }
+  }, [])
+
+  // Mevcut değerlendirme kontrolü
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (showNameInput) return // Kullanıcı adı girilmediyse kontrol etme
+
+    const hasExistingData = localStorage.getItem("hierarchicalComparisonData")
+    if (!hasExistingData) {
+      startNewEvaluation()
+      return
+    }
+
+    try {
+      const data = JSON.parse(hasExistingData)
+      if (data.hierarchyData && data.sliderPositions) {
         const shouldContinue = confirm(
           "Devam eden bir AHP değerlendirmesi bulundu. " +
           "Devam etmek ister misiniz?\n\n" +
@@ -111,23 +144,15 @@ export default function HierarchicalComparisonPage() {
           startNewEvaluation()
           return
         }
-        
-        // Mevcut verileri yükle
-        try {
-          const data = JSON.parse(hasExistingData)
-          if (data.hierarchyData && data.sliderPositions) {
-            setHierarchyData(data.hierarchyData)
-            setSliderPositions(data.sliderPositions)
-          }
-        } catch (e) {
-          console.error("Error loading saved comparison data:", e)
-          startNewEvaluation()
-        }
-      } else {
-        setSliderPositions(initialSliderPositions)
+
+        setHierarchyData(data.hierarchyData)
+        setSliderPositions(data.sliderPositions)
       }
+    } catch (e) {
+      console.error("Error loading saved comparison data:", e)
+      startNewEvaluation()
     }
-  }, [])
+  }, [showNameInput, startNewEvaluation])
 
   // Kullanıcı adı giriş formu
   if (showNameInput) {
@@ -170,36 +195,6 @@ export default function HierarchicalComparisonPage() {
         </Card>
       </div>
     )
-  }
-
-  // Yeni değerlendirme başlatma fonksiyonu
-  const startNewEvaluation = () => {
-    // Tüm karşılaştırma verilerini temizle
-    localStorage.removeItem("hierarchicalComparisonData")
-    
-    // Hierarchy data'yı yeniden başlat
-    const freshHierarchyData = initializeHierarchyData()
-    setHierarchyData(freshHierarchyData)
-    
-    // Slider pozisyonlarını temizle
-    const freshSliderPositions: Record<string, Record<string, number>> = {
-      mainCriteria: {},
-      subCriteria: {},
-      subSubCriteria: {},
-    }
-    setSliderPositions(freshSliderPositions)
-    
-    // Genişletilmiş grupları temizle
-    setExpandedGroups({})
-    
-    // Ana tab'a dön
-    setActiveTab("main")
-    
-    // Hataları temizle
-    setError(null)
-    setResults(null)
-    
-    console.log("Yeni değerlendirme başlatıldı - tüm veriler temizlendi")
   }
 
   const handleSliderChange = (level: string, parentId: string | null, row: number, col: number, position: number) => {
