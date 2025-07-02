@@ -87,7 +87,7 @@ export default function AllResultsPage() {
             const maxC = Math.max(...cArr)
             const minC = Math.min(...cArr)
             const stdC = Math.sqrt(cArr.reduce((a: number, b: number) => a + Math.pow(b-avgC,2), 0) / (cArr.length || 1))
-            const excellentCount = cArr.filter((c: number) => c >= 0.9).length
+            const excellentCount = cArr.filter((c: number) => c > avgC + 2*stdC).length
             const below1StdCount = cArr.filter((c: number) => c < avgC - stdC).length
             const below2StdCount = cArr.filter((c: number) => c < avgC - 2*stdC).length
             setKpi({
