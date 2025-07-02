@@ -76,6 +76,59 @@ export default function HierarchicalComparisonPage() {
   const [results, setResults] = useState<any>(null)
   const [criteriaDescriptions] = useState(getCriteriaDescriptions())
 
+  useEffect(() => {
+    // Load evaluator name
+    if (typeof window !== 'undefined') {
+      const storedName = localStorage.getItem("evaluatorName")
+      if (storedName) {
+        setEvaluatorName(storedName)
+      }
+    }
+
+    // Initialize hierarchy data
+    const initialData = initializeHierarchyData()
+    setHierarchyData(initialData)
+
+    // Initialize slider positions
+    const initialSliderPositions: Record<string, Record<string, number>> = {
+      mainCriteria: {},
+      subCriteria: {},
+      subSubCriteria: {},
+    }
+
+    // Yeni değerlendirme kontrolü - sayfa her yüklendiğinde kullanıcıya sor
+    if (typeof window !== 'undefined') {
+      const hasExistingData = localStorage.getItem("hierarchicalComparisonData")
+      if (hasExistingData) {
+        const shouldContinue = confirm(
+          "Devam eden bir AHP değerlendirmesi bulundu. " +
+          "Devam etmek ister misiniz?\n\n" +
+          "• TAMAM: Kaldığınız yerden devam edin\n" +
+          "• İPTAL: Yeni değerlendirme başlatın"
+        )
+        
+        if (!shouldContinue) {
+          startNewEvaluation()
+          return
+        }
+        
+        // Mevcut verileri yükle
+        try {
+          const data = JSON.parse(hasExistingData)
+          if (data.hierarchyData && data.sliderPositions) {
+            setHierarchyData(data.hierarchyData)
+            setSliderPositions(data.sliderPositions)
+          }
+        } catch (e) {
+          console.error("Error loading saved comparison data:", e)
+          startNewEvaluation()
+        }
+      } else {
+        setSliderPositions(initialSliderPositions)
+      }
+    }
+  }, [])
+
   // Kullanıcı adı giriş formu
   if (showNameInput) {
     return (
@@ -91,7 +144,9 @@ export default function HierarchicalComparisonPage() {
             <form onSubmit={(e) => {
               e.preventDefault()
               if (evaluatorName.trim()) {
-                localStorage.setItem("evaluatorName", evaluatorName.trim())
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem("evaluatorName", evaluatorName.trim())
+                }
                 setShowNameInput(false)
               }
             }}>
@@ -146,17 +201,6 @@ export default function HierarchicalComparisonPage() {
     
     console.log("Yeni değerlendirme başlatıldı - tüm veriler temizlendi")
   }
-
-  useEffect(() => {
-    // Load evaluator name
-    const storedName = localStorage.getItem("evaluatorName")
-    if (storedName) {
-      setEvaluatorName(storedName)
-    }
-
-    // Her sayfa yüklendiğinde yeni değerlendirme başlat
-    startNewEvaluation()
-  }, [])
 
   const handleSliderChange = (level: string, parentId: string | null, row: number, col: number, position: number) => {
     // Determine the key based on the level and parent

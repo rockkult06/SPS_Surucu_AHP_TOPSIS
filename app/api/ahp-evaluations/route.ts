@@ -1,36 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 
-// Geçici olarak localStorage benzeri bir in-memory storage kullanıyoruz
+// Geçici olarak in-memory storage kullanıyoruz
 // Gerçek projede PostgreSQL, MongoDB vs. kullanılabilir
 let evaluationsStorage: any[] = []
 
-// LocalStorage'dan verileri yükle
-const loadFromStorage = () => {
-  try {
-    const storedData = localStorage.getItem('ahpEvaluations')
-    if (storedData) {
-      evaluationsStorage = JSON.parse(storedData)
-    }
-  } catch (error) {
-    console.error('Veriler yüklenirken hata:', error)
-  }
-}
-
-// LocalStorage'a verileri kaydet
-const saveToStorage = () => {
-  try {
-    localStorage.setItem('ahpEvaluations', JSON.stringify(evaluationsStorage))
-  } catch (error) {
-    console.error('Veriler kaydedilirken hata:', error)
-  }
-}
-
-// Başlangıçta verileri yükle
-loadFromStorage()
-
 export async function GET() {
   try {
-    loadFromStorage() // Her GET isteğinde güncel verileri al
     return NextResponse.json({
       evaluations: evaluationsStorage
     })
@@ -65,7 +40,6 @@ export async function POST(request: NextRequest) {
     }
 
     evaluationsStorage.push(newEvaluation)
-    saveToStorage() // Yeni değerlendirmeyi kaydet
 
     return NextResponse.json({
       success: true,
@@ -93,7 +67,6 @@ export async function DELETE(request: NextRequest) {
 
     const initialLength = evaluationsStorage.length
     evaluationsStorage = evaluationsStorage.filter(evaluation => evaluation.id !== id)
-    saveToStorage() // Değişiklikleri kaydet
 
     if (evaluationsStorage.length === initialLength) {
       return NextResponse.json(

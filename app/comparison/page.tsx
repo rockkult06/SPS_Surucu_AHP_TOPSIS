@@ -69,7 +69,9 @@ export default function ComparisonPage() {
             <form onSubmit={(e) => {
               e.preventDefault()
               if (evaluatorName.trim()) {
-                localStorage.setItem("evaluatorName", evaluatorName.trim())
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem("evaluatorName", evaluatorName.trim())
+                }
                 setShowNameInput(false)
               }
             }}>
@@ -97,13 +99,17 @@ export default function ComparisonPage() {
 
   useEffect(() => {
     // Load evaluator name
-    const storedName = localStorage.getItem("evaluatorName")
-    if (storedName) {
-      setEvaluatorName(storedName)
+    if (typeof window !== 'undefined') {
+      const storedName = localStorage.getItem("evaluatorName")
+      if (storedName) {
+        setEvaluatorName(storedName)
+      }
     }
 
     // Önceki karşılaştırma verilerini temizle
-    localStorage.removeItem("hierarchicalComparisonData")
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem("hierarchicalComparisonData")
+    }
 
     // Calculate total number of comparisons needed
     let total = 0
