@@ -97,16 +97,24 @@ export default function TOPSISPage() {
         const json: any[] = XLSX.utils.sheet_to_json(worksheet)
 
         const processedData: DriverData[] = json.map((row, index) => {
+          // Tüm anahtarları trimle
+          const normalizedRow: any = {};
+          if (row) {
+            Object.keys(row).forEach(key => {
+              if (key) normalizedRow[key.trim()] = row[key];
+            });
+          }
+
           // Debug: Log first few rows to see the structure
           if (index < 3) {
-            console.log(`Row ${index}:`, row)
-            console.log(`Available keys:`, Object.keys(row))
+            console.log(`Row ${index}:`, normalizedRow)
+            console.log(`Available keys:`, Object.keys(normalizedRow))
           }
 
           const driver: DriverData = {
-            driverId: row["Sicil No"] || row["SicilNo"] || row["sicil no"] || `Driver_${index}`,
-            tripCount: row["Sefer Sayısı"] || row["sefer sayısı"] || 0,
-            distance: row["Yapılan Kilometre"] || row["yapılan kilometre"] || 0,
+            driverId: normalizedRow["Sicil No"] || normalizedRow["SicilNo"] || normalizedRow["sicil no"] || `Driver_${index}`,
+            tripCount: normalizedRow["Sefer Sayısı"] || normalizedRow["sefer sayısı"] || 0,
+            distance: normalizedRow["Yapılan Kilometre"] || normalizedRow["yapılan kilometre"] || 0,
           }
 
           // Log the extracted basic info
@@ -120,10 +128,9 @@ export default function TOPSISPage() {
 
           leafCriteria.forEach((criterion) => {
             let value = 0
-            
             // Try direct criterion name first
-            if (row[criterion.name] !== undefined) {
-              const rawValue = row[criterion.name]
+            if (normalizedRow[criterion.name] !== undefined) {
+              const rawValue = normalizedRow[criterion.name]
               if (typeof rawValue === "string") {
                 value = Number.parseFloat(rawValue.replace(",", ".")) || 0
               } else if (typeof rawValue === "number") {
@@ -134,8 +141,8 @@ export default function TOPSISPage() {
               const excelHeader = Object.keys(excelColumnMappings).find(
                 (key) => excelColumnMappings[key] === criterion.id
               )
-              if (excelHeader && row[excelHeader] !== undefined) {
-                const rawValue = row[excelHeader]
+              if (excelHeader && normalizedRow[excelHeader] !== undefined) {
+                const rawValue = normalizedRow[excelHeader]
                 if (typeof rawValue === "string") {
                   value = Number.parseFloat(rawValue.replace(",", ".")) || 0
                 } else if (typeof rawValue === "number") {
@@ -143,15 +150,12 @@ export default function TOPSISPage() {
                 }
               }
             }
-            
             driver[criterion.id] = value
-            
             // Debug: Log criterion values for first driver
             if (index === 0) {
               console.log(`Criterion ${criterion.name} (${criterion.id}): ${value}`)
             }
           })
-          
           return driver
         })
         setDriversData(processedData)
