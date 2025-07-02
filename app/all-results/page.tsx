@@ -320,7 +320,7 @@ export default function AllResultsPage() {
               </Button>
             </div>
           </div>
-          <div className="overflow-x-auto max-h-[600px] overflow-y-auto border rounded-lg" onScroll={handleScroll}>
+          <div className="overflow-x-scroll max-h-[600px] overflow-y-auto border rounded-lg scrollbar scrollbar-thumb-gray-400 scrollbar-track-gray-100" onScroll={handleScroll}>
             <Table>
               <TableHeader>
                 <TableRow>
