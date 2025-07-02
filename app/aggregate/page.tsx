@@ -71,7 +71,7 @@ export default function AggregateWeightsPage() {
       return
     }
 
-    const selectedEvals = evaluations.filter(eval => selectedEvaluations.includes(eval.id))
+    const selectedEvals = evaluations.filter(evaluation => selectedEvaluations.includes(evaluation.id))
     if (selectedEvals.length === 0) return
 
     const avgWeights: Record<string, number> = {}
@@ -79,7 +79,7 @@ export default function AggregateWeightsPage() {
     // Her kriter için ortalama hesapla
     leafCriteria.forEach(criterion => {
       const weights = selectedEvals
-        .map(eval => eval.globalWeights[criterion.id] || 0)
+        .map(evaluation => evaluation.globalWeights[criterion.id] || 0)
         .filter(weight => weight > 0)
       
       if (weights.length > 0) {
@@ -99,7 +99,7 @@ export default function AggregateWeightsPage() {
   }
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedEvaluations(checked ? evaluations.map(eval => eval.id) : [])
+    setSelectedEvaluations(checked ? evaluations.map(evaluation => evaluation.id) : [])
   }
 
   const handleDeleteEvaluation = async (evaluationId: string) => {
@@ -109,7 +109,7 @@ export default function AggregateWeightsPage() {
       })
       
       if (response.ok) {
-        setEvaluations(prev => prev.filter(eval => eval.id !== evaluationId))
+        setEvaluations(prev => prev.filter(evaluation => evaluation.id !== evaluationId))
         setSelectedEvaluations(prev => prev.filter(id => id !== evaluationId))
       } else {
         alert("Değerlendirme silinirken hata oluştu.")
