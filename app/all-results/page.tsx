@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Alert } from "@/components/ui/alert"
-import { Info, Download } from "lucide-react"
+import { Info, Download, Trash2 } from "lucide-react"
 import { motion } from "framer-motion"
 import { Bar, Pie } from "react-chartjs-2"
 import * as XLSX from "xlsx"
@@ -68,7 +68,7 @@ export default function AllResultsPage() {
     const leaf = getLeafCriteria()
     setCriteria(leaf.map(c => ({ id: c.id, name: c.name })))
     
-    // TOPSIS sonuçlarını localStorage'dan çek
+    // TOPSIS sonuçlarını localStorage'dan çek - sadece storage event ile
     const loadTopsis = () => {
       const stored = localStorage.getItem("topsisResults")
       console.log("Loading TOPSIS results from localStorage:", stored ? "Data found" : "No data")
@@ -125,8 +125,8 @@ export default function AllResultsPage() {
       }
     }
     
-    // İlk yükleme
-    loadTopsis()
+    // İlk yükleme - localStorage'dan otomatik yükleme yok
+    // loadTopsis() - Bu satırı kaldırdık
     
     // Storage event ile güncelle (TOPSIS hesaplaması tamamlandığında)
     const onStorage = (e: StorageEvent) => {
@@ -173,158 +173,202 @@ export default function AllResultsPage() {
     XLSX.writeFile(wb, `TOPSIS_Tum_Sonuclar_${new Date().toLocaleDateString()}.xlsx`)
   }
 
+  // Sonuçları temizle fonksiyonu
+  const clearResults = () => {
+    setTopsisResults([])
+    setKpi({
+      totalDrivers: 0,
+      avgC: 0,
+      maxC: 0,
+      minC: 0,
+      stdC: 0,
+      excellentCount: 0,
+    })
+    setCriteriaStats([])
+    setHistogramData({labels: [], counts: []})
+    localStorage.removeItem("topsisResults")
+    setVisibleCount(20)
+    setSortBy("rank")
+    setSortOrder("asc")
+    setFilters({})
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-4">Tüm Sürücü Sonuçları</h1>
-      {/* KPI Kartları */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      
+      {topsisResults.length === 0 ? (
         <Card>
-          <CardHeader>
-            <CardTitle>Toplam Sürücü Sayısı</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <span className="text-2xl font-bold">{kpi.totalDrivers}</span>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Info className="h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">TOPSIS Sonucu Bulunamadı</h3>
+            <p className="text-gray-500 text-center mb-4">
+              Henüz bir TOPSIS hesaplaması yapılmamış. Sonuçları görmek için önce TOPSIS sayfasında hesaplama yapın.
+            </p>
+            <Button onClick={() => window.location.href = '/topsis'} className="bg-blue-600 hover:bg-blue-700">
+              TOPSIS Hesaplaması Yap
+            </Button>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Ortalama TOPSIS Puanı</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <span className="text-2xl font-bold">{kpi.avgC.toFixed(3)}</span>
-          </CardContent>
-        </Card>
-        <Card>
-                        <CardHeader>
-            <CardTitle>Mükemmel Performanslılar</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-            <span className="text-2xl font-bold">{kpi.excellentCount}</span>
-                        </CardContent>
-                      </Card>
-      </div>
-      {/* Kriter Bazlı Ortalama Değerler - Progress Bar Kartları */}
-      <div className="mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Kriter Bazlı Ortalama Değerler</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {criteriaStats.length > 0 ? (
-                criteriaStats.map(s => (
-                  <div key={s.id} className="flex flex-col gap-1 p-3 border rounded-lg bg-gray-50 dark:bg-gray-900/10">
-                    <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate" title={s.name}>{s.name}</span>
-                    <Progress value={Math.round(s.avg * 100)} max={100} className="h-2 bg-gray-200" />
-                    <span className="text-xs text-gray-500 mt-1">Ortalama: <b>{s.avg.toFixed(2)}</b></span>
-                  </div>
-                ))
-              ) : (
-                <span className="text-muted-foreground">Grafik ve özetler burada olacak</span>
-              )}
+      ) : (
+        <>
+          {/* KPI Kartları */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Toplam Sürücü Sayısı</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <span className="text-2xl font-bold">{kpi.totalDrivers}</span>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Ortalama TOPSIS Puanı</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <span className="text-2xl font-bold">{kpi.avgC.toFixed(3)}</span>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Mükemmel Performanslılar</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <span className="text-2xl font-bold">{kpi.excellentCount}</span>
+              </CardContent>
+            </Card>
+          </div>
+          {/* Kriter Bazlı Ortalama Değerler - Progress Bar Kartları */}
+          <div className="mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Kriter Bazlı Ortalama Değerler</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {criteriaStats.length > 0 ? (
+                    criteriaStats.map(s => (
+                      <div key={s.id} className="flex flex-col gap-1 p-3 border rounded-lg bg-gray-50 dark:bg-gray-900/10">
+                        <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate" title={s.name}>{s.name}</span>
+                        <Progress value={Math.round(s.avg * 100)} max={100} className="h-2 bg-gray-200" />
+                        <span className="text-xs text-gray-500 mt-1">Ortalama: <b>{s.avg.toFixed(2)}</b></span>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground">Grafik ve özetler burada olacak</span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          {/* En Yüksek ve En Düşük Puan Alanlar Kartları */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>En Yüksek Puan Alanlar</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-1">
+                  {filteredSortedResults.slice(0, 3).map((row, i) => (
+                    <li key={row.driverId} className="flex items-center justify-between text-sm">
+                      <span className="font-semibold">{row.rank}.</span>
+                      <span className="mx-2">{row.driverId}</span>
+                      <span className="text-blue-700 font-bold">{row.closenessCoefficient.toFixed(3)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>En Düşük Puan Alanlar</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-1">
+                  {filteredSortedResults.slice(-3).map((row, i) => (
+                    <li key={row.driverId} className="flex items-center justify-between text-sm">
+                      <span className="font-semibold">{row.rank}.</span>
+                      <span className="mx-2">{row.driverId}</span>
+                      <span className="text-red-700 font-bold">{row.closenessCoefficient.toFixed(3)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+          {/* Tam genişlikte, sıralanabilir ve filtrelenebilir tablo */}
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Sürücü Sıralama Tablosu</h3>
+            <div className="flex gap-2">
+              <Button onClick={clearResults} variant="outline" className="flex items-center gap-2">
+                <Trash2 className="h-4 w-4" />
+                Sonuçları Temizle
+              </Button>
+              <Button onClick={exportToExcel} className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Excel'e Aktar
+              </Button>
             </div>
-          </CardContent>
-        </Card>
-                  </div>
-      {/* En Yüksek ve En Düşük Puan Alanlar Kartları */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <Card>
-                        <CardHeader>
-            <CardTitle>En Yüksek Puan Alanlar</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-            <ul className="space-y-1">
-              {filteredSortedResults.slice(0, 3).map((row, i) => (
-                <li key={row.driverId} className="flex items-center justify-between text-sm">
-                  <span className="font-semibold">{row.rank}.</span>
-                  <span className="mx-2">{row.driverId}</span>
-                  <span className="text-blue-700 font-bold">{row.closenessCoefficient.toFixed(3)}</span>
-                </li>
-              ))}
-            </ul>
-                        </CardContent>
-                      </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>En Düşük Puan Alanlar</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-1">
-              {filteredSortedResults.slice(-3).map((row, i) => (
-                <li key={row.driverId} className="flex items-center justify-between text-sm">
-                  <span className="font-semibold">{row.rank}.</span>
-                  <span className="mx-2">{row.driverId}</span>
-                  <span className="text-red-700 font-bold">{row.closenessCoefficient.toFixed(3)}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-      {/* Tam genişlikte, sıralanabilir ve filtrelenebilir tablo */}
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Sürücü Sıralama Tablosu</h3>
-        <Button onClick={exportToExcel} className="flex items-center gap-2">
-          <Download className="h-4 w-4" />
-          Excel'e Aktar
-        </Button>
-      </div>
-      <div className="overflow-x-auto max-h-[600px] overflow-y-auto border rounded-lg" onScroll={handleScroll}>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Sicil No</TableHead>
-              {criteria.map(c => (
-                <TableHead key={c.id} className="cursor-pointer" onClick={() => {
-                  setSortBy(c.id)
-                  setSortOrder(o => (sortBy === c.id && o === "asc") ? "desc" : "asc")
-                }}>
-                  {c.name}
-                  {sortBy === c.id ? (sortOrder === "asc" ? " ▲" : " ▼") : ""}
-                </TableHead>
-              ))}
-              <TableHead className="cursor-pointer" onClick={() => {
-                setSortBy("closenessCoefficient")
-                setSortOrder(o => (sortBy === "closenessCoefficient" && o === "asc") ? "desc" : "asc")
-              }}>
-                TOPSIS Puanı (C*){sortBy === "closenessCoefficient" ? (sortOrder === "asc" ? " ▲" : " ▼") : ""}
-              </TableHead>
-              <TableHead className="cursor-pointer" onClick={() => {
-                setSortBy("rank")
-                setSortOrder(o => (sortBy === "rank" && o === "asc") ? "desc" : "asc")
-              }}>
-                Sıralama{sortBy === "rank" ? (sortOrder === "asc" ? " ▲" : " ▼") : ""}
-              </TableHead>
-            </TableRow>
-            {/* Filtre inputları */}
-            <TableRow>
-              <TableCell></TableCell>
-              {criteria.map(c => (
-                <TableCell key={c.id}>
-                  <input type="text" className="w-16 px-1 py-0.5 border rounded text-xs" placeholder="Filtrele" value={filters[c.id]||""} onChange={e => setFilters(f => ({...f, [c.id]: e.target.value}))} />
-                </TableCell>
-              ))}
-              <TableCell></TableCell>
-              <TableCell></TableCell>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredSortedResults.slice(0, visibleCount).map((row, i) => (
-              <TableRow key={row.driverId}>
-                <TableCell>{row.driverId}</TableCell>
-                {criteria.map(c => <TableCell key={c.id}>{row.normalizedPerformance?.[c.id]?.toFixed(2) ?? '-'}</TableCell>)}
-                <TableCell>{row.closenessCoefficient.toFixed(3)}</TableCell>
-                <TableCell>{row.rank}</TableCell>
-              </TableRow>
-            ))}
-            {filteredSortedResults.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={criteria.length+3} className="text-center text-muted-foreground">Veri bulunamadı.</TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+          </div>
+          <div className="overflow-x-auto max-h-[600px] overflow-y-auto border rounded-lg" onScroll={handleScroll}>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Sicil No</TableHead>
+                  {criteria.map(c => (
+                    <TableHead key={c.id} className="cursor-pointer" onClick={() => {
+                      setSortBy(c.id)
+                      setSortOrder(o => (sortBy === c.id && o === "asc") ? "desc" : "asc")
+                    }}>
+                      {c.name}
+                      {sortBy === c.id ? (sortOrder === "asc" ? " ▲" : " ▼") : ""}
+                    </TableHead>
+                  ))}
+                  <TableHead className="cursor-pointer" onClick={() => {
+                    setSortBy("closenessCoefficient")
+                    setSortOrder(o => (sortBy === "closenessCoefficient" && o === "asc") ? "desc" : "asc")
+                  }}>
+                    TOPSIS Puanı (C*){sortBy === "closenessCoefficient" ? (sortOrder === "asc" ? " ▲" : " ▼") : ""}
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => {
+                    setSortBy("rank")
+                    setSortOrder(o => (sortBy === "rank" && o === "asc") ? "desc" : "asc")
+                  }}>
+                    Sıralama{sortBy === "rank" ? (sortOrder === "asc" ? " ▲" : " ▼") : ""}
+                  </TableHead>
+                </TableRow>
+                {/* Filtre inputları */}
+                <TableRow>
+                  <TableCell></TableCell>
+                  {criteria.map(c => (
+                    <TableCell key={c.id}>
+                      <input type="text" className="w-16 px-1 py-0.5 border rounded text-xs" placeholder="Filtrele" value={filters[c.id]||""} onChange={e => setFilters(f => ({...f, [c.id]: e.target.value}))} />
+                    </TableCell>
+                  ))}
+                  <TableCell></TableCell>
+                  <TableCell></TableCell>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredSortedResults.slice(0, visibleCount).map((row, i) => (
+                  <TableRow key={row.driverId}>
+                    <TableCell>{row.driverId}</TableCell>
+                    {criteria.map(c => <TableCell key={c.id}>{row.normalizedPerformance?.[c.id]?.toFixed(2) ?? '-'}</TableCell>)}
+                    <TableCell>{row.closenessCoefficient.toFixed(3)}</TableCell>
+                    <TableCell>{row.rank}</TableCell>
+                  </TableRow>
+                ))}
+                {filteredSortedResults.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={criteria.length+3} className="text-center text-muted-foreground">Veri bulunamadı.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
     </div>
   )
 }
