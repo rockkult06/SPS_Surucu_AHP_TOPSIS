@@ -26,8 +26,6 @@ export default function AHPResultsPage({}: AHPResultsPageProps) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    
     const storedResults = localStorage.getItem("ahpResults")
     if (storedResults) {
       try {

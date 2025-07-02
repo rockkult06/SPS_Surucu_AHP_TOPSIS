@@ -1,6 +1,5 @@
 "use client"
 
-
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -12,9 +11,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { criteriaHierarchy, getCriteriaDescriptions, initializeHierarchyData } from "@/lib/criteria-hierarchy"
 import type { JSX } from "react/jsx-runtime"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { useLocalStorage, useLocalStorageItem } from "@/hooks/use-local-storage"
 
 // Saaty scale values and their corresponding numeric values
 const saatyValues = [
@@ -49,62 +45,32 @@ export default function ComparisonPage() {
   const [expandedSections, setExpandedSections] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [showNameInput, setShowNameInput] = useState(true)
+  const [evaluatorName, setEvaluatorName] = useState("")
   const [progress, setProgress] = useState(0)
   const [totalComparisons, setTotalComparisons] = useState(0)
   const [completedComparisons, setCompletedComparisons] = useState(0)
   const [criteriaDescriptions] = useState(getCriteriaDescriptions())
 
-  // localStorage hooks
-  const [evaluatorName, setEvaluatorName] = useLocalStorage("evaluatorName", "")
-  const { removeItem: removeComparisonData } = useLocalStorageItem("hierarchicalComparisonData")
-
-  // Kullanıcı adı giriş formu
-  if (showNameInput) {
-    return (
-      <div className="container mx-auto px-4 py-8 max-w-lg">
-        <Card className="card-shadow overflow-hidden border-0">
-          <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-primary-foreground py-8">
-            <CardTitle className="text-2xl font-bold">AHP Değerlendirmesi</CardTitle>
-            <CardDescription className="text-primary-foreground/90">
-              Lütfen değerlendirmeyi yapmak için adınızı girin.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-8">
-            <form onSubmit={(e) => {
-              e.preventDefault()
-              if (evaluatorName.trim()) {
-                setShowNameInput(false)
-              }
-            }}>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="evaluatorName">Adınız</Label>
-                  <Input
-                    id="evaluatorName"
-                    placeholder="Adınızı girin"
-                    value={evaluatorName}
-                    onChange={(e) => setEvaluatorName(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full">
-                  Değerlendirmeye Başla
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // Karşılaştırma verilerini temizle ve toplam karşılaştırma sayısını hesapla
   useEffect(() => {
-    if (showNameInput) return // Kullanıcı adı girilmediyse işlem yapma
+    // Load evaluator name
+    const storedName = localStorage.getItem("evaluatorName")
+    if (storedName) {
+      setEvaluatorName(storedName)
+    }
 
-    // Önceki karşılaştırma verilerini temizle
-    removeComparisonData()
+    // Load saved comparison data if exists
+    const savedComparisons = localStorage.getItem("hierarchicalComparisonData")
+    if (savedComparisons) {
+      try {
+        const data = JSON.parse(savedComparisons)
+        if (data.hierarchyData && data.sliderPositions) {
+          setHierarchyData(data.hierarchyData)
+          setSliderPositions(data.sliderPositions)
+        }
+      } catch (e) {
+        console.error("Error loading saved comparison data:", e)
+      }
+    }
 
     // Calculate total number of comparisons needed
     let total = 0
@@ -132,8 +98,8 @@ export default function ComparisonPage() {
     })
 
     setTotalComparisons(total)
-    setCompletedComparisons(0)
-  }, [showNameInput, hierarchyData])
+    setCompletedComparisons(Object.keys(sliderPositions).length)
+  }, [])
 
   useEffect(() => {
     // Update progress when completed comparisons change
@@ -200,15 +166,13 @@ export default function ComparisonPage() {
   }
 
   const saveComparisonData = (data: any, positions: Record<string, number>) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(
-        "hierarchicalComparisonData",
-        JSON.stringify({
-          hierarchyData: data,
-          sliderPositions: positions,
-        })
-      )
-    }
+    localStorage.setItem(
+      "hierarchicalComparisonData",
+      JSON.stringify({
+        hierarchyData: data,
+        sliderPositions: positions,
+      }),
+    )
   }
 
   const validateHierarchy = () => {
@@ -317,9 +281,7 @@ export default function ComparisonPage() {
       console.log("AHP calculation response:", JSON.stringify(data, null, 2))
 
       // Store results in localStorage to pass to results page
-      if (typeof window !== 'undefined') {
-        localStorage.setItem("ahpResults", JSON.stringify(data))
-      }
+      localStorage.setItem("ahpResults", JSON.stringify(data))
 
       // Navigate to results page
       router.push("/results")

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-// Geçici olarak in-memory storage kullanıyoruz
+// Geçici olarak localStorage benzeri bir in-memory storage kullanıyoruz
 // Gerçek projede PostgreSQL, MongoDB vs. kullanılabilir
 let evaluationsStorage: any[] = []
 
