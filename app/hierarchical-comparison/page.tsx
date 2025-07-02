@@ -322,15 +322,35 @@ export default function HierarchicalComparisonPage() {
 
       // Store results in localStorage
       if (results) {
+        const resultData = {
+          ...results,
+          evaluatorName,
+          date: new Date().toISOString(),
+          criteriaMap: hierarchyData.criteriaMap,
+        }
+        
         localStorage.setItem(
           "ahpResults", // Changed to ahpResults for consistency with results page
-          JSON.stringify({
-            ...results,
-            evaluatorName,
-            date: new Date().toISOString(),
-            criteriaMap: hierarchyData.criteriaMap,
-          }),
+          JSON.stringify(resultData),
         )
+
+        // Veritabanına da kaydet
+        fetch('/api/ahp-evaluations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            evaluatorName,
+            globalWeights: results.globalWeights,
+            date: new Date().toISOString(),
+            mainCR: results.mainCR,
+            isOverallConsistent: results.isOverallConsistent
+          })
+        }).catch(error => {
+          console.error('Veritabanına kaydetme hatası:', error)
+          // Hata olsa da devam et, localStorage zaten var
+        })
       }
 
       // Navigate to results page

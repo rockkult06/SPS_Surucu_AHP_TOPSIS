@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, Download, Info, CheckCircle } from "lucide-react"
+import { AlertCircle, Download, Info, CheckCircle, Users } from "lucide-react"
 import { motion } from "framer-motion"
 import * as XLSX from "xlsx"
 import jsPDF from "jspdf"
@@ -573,7 +573,17 @@ export default function TOPSISPage() {
 
             {Object.keys(ahpWeights).length > 0 && (
               <div className="mb-8">
-                <h3 className="text-lg font-semibold mb-4">AHP Global Kriter Ağırlıkları</h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold mb-4">AHP Global Kriter Ağırlıkları</h3>
+                  <Button 
+                    onClick={() => router.push('/aggregate')} 
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <Users className="h-4 w-4" />
+                    Toplu Ağırlıklar
+                  </Button>
+                </div>
                 <Table className="mb-4">
                   <TableHeader>
                     <TableRow>
@@ -618,7 +628,8 @@ export default function TOPSISPage() {
                   <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
                   <AlertDescription className="text-yellow-800 dark:text-yellow-200">
                     Her kriterin 'Fayda' (daha yüksek daha iyi) veya 'Maliyet' (daha düşük daha iyi) tipi TOPSIS
-                    hesaplaması için önemlidir. Lütfen doğru seçimi yapın.
+                    hesaplaması için önemlidir. Lütfen doğru seçimi yapın. <br/>
+                    Toplu ağırlıklar için <strong>Toplu Ağırlıklar</strong> sayfasını ziyaret edin.
                   </AlertDescription>
                 </Alert>
               </div>

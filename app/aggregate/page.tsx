@@ -7,46 +7,29 @@ import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import { Download, Info, CheckCircle } from "lucide-react"
+import { Download, Info, CheckCircle, Trash2, Users } from "lucide-react"
 import * as XLSX from "xlsx"
 import { getLeafCriteria, getCriteriaPath, criteriaHierarchy } from "@/lib/criteria-hierarchy"
 
-interface AHPResult {
+interface AHPEvaluation {
+  id: string
   evaluatorName: string
-  mainCriteriaWeights: Record<string, number>
-  subCriteriaWeights: Record<string, Record<string, number>>
-  subSubCriteriaWeights?: Record<string, Record<string, number>>
-  subSubSubCriteriaWeights?: Record<string, Record<string, number>>
-  leafCriteriaWeights: Record<string, number>
-  consistencyRatios: Record<string, number>
+  globalWeights: Record<string, number>
+  date: string
+  mainCR: number
+  isOverallConsistent: boolean
+  createdAt: string
 }
 
 export default function AggregateWeightsPage() {
   const router = useRouter()
-  const [ahpResults, setAhpResults] = useState<AHPResult | null>(null)
+  const [evaluations, setEvaluations] = useState<AHPEvaluation[]>([])
+  const [selectedEvaluations, setSelectedEvaluations] = useState<string[]>([])
+  const [averageWeights, setAverageWeights] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const storedResults = localStorage.getItem("ahpResults")
-    if (storedResults) {
-      try {
-        const parsedResults: AHPResult = JSON.parse(storedResults)
-        setAhpResults(parsedResults)
-      } catch (e) {
-        console.error("Error parsing AHP results from localStorage:", e)
-        setError("Kayıtlı AHP sonuçları yüklenirken bir hata oluştu.")
-      } finally {
-        setLoading(false)
-      }
-    } else {
-      setError(
-        "Henüz hesaplanmış AHP sonucu bulunmamaktadır. Lütfen önce 'AHP Ölçme Aracı' sayfasında değerlendirme yapın.",
-      )
-      setLoading(false)
-    }
-  }, [])
 
   const leafCriteria = useMemo(() => getLeafCriteria(), [])
 
@@ -59,13 +42,109 @@ export default function AggregateWeightsPage() {
     return pathIds.map((pathId) => criteriaHierarchy[pathId]?.name || pathId).join(" > ")
   }, [])
 
-  const handleExportToExcel = useCallback(() => {
-    if (!ahpResults) {
-      setError("Dışa aktarılacak veri bulunamadı.")
+  // Veritabanından değerlendirmeleri yükle
+  useEffect(() => {
+    const loadEvaluations = async () => {
+      try {
+        const response = await fetch('/api/ahp-evaluations')
+        if (response.ok) {
+          const data = await response.json()
+          setEvaluations(data.evaluations || [])
+        } else {
+          setError("Değerlendirmeler yüklenirken hata oluştu.")
+        }
+      } catch (e) {
+        console.error("Değerlendirmeler yüklenirken hata:", e)
+        setError("Değerlendirmeler yüklenirken hata oluştu.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadEvaluations()
+  }, [])
+
+  // Seçilen değerlendirmelerin ortalama ağırlıklarını hesapla
+  useEffect(() => {
+    if (selectedEvaluations.length === 0) {
+      setAverageWeights({})
       return
     }
 
-    const dataToExport = Object.entries(ahpResults.leafCriteriaWeights)
+    const selectedEvals = evaluations.filter(eval => selectedEvaluations.includes(eval.id))
+    if (selectedEvals.length === 0) return
+
+    const avgWeights: Record<string, number> = {}
+    
+    // Her kriter için ortalama hesapla
+    leafCriteria.forEach(criterion => {
+      const weights = selectedEvals
+        .map(eval => eval.globalWeights[criterion.id] || 0)
+        .filter(weight => weight > 0)
+      
+      if (weights.length > 0) {
+        avgWeights[criterion.id] = weights.reduce((sum, weight) => sum + weight, 0) / weights.length
+      }
+    })
+
+    setAverageWeights(avgWeights)
+  }, [selectedEvaluations, evaluations, leafCriteria])
+
+  const handleEvaluationToggle = (evaluationId: string, checked: boolean) => {
+    setSelectedEvaluations(prev => 
+      checked 
+        ? [...prev, evaluationId]
+        : prev.filter(id => id !== evaluationId)
+    )
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    setSelectedEvaluations(checked ? evaluations.map(eval => eval.id) : [])
+  }
+
+  const handleDeleteEvaluation = async (evaluationId: string) => {
+    try {
+      const response = await fetch(`/api/ahp-evaluations?id=${evaluationId}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        setEvaluations(prev => prev.filter(eval => eval.id !== evaluationId))
+        setSelectedEvaluations(prev => prev.filter(id => id !== evaluationId))
+      } else {
+        alert("Değerlendirme silinirken hata oluştu.")
+      }
+    } catch (error) {
+      console.error("Silme hatası:", error)
+      alert("Değerlendirme silinirken hata oluştu.")
+    }
+  }
+
+  const handleSaveAverageWeights = () => {
+    if (Object.keys(averageWeights).length === 0) {
+      alert("Ortalama hesaplanacak değerlendirme seçin.")
+      return
+    }
+
+    // Ortalama ağırlıkları localStorage'a kaydet (TOPSIS'te kullanılmak üzere)
+    const avgResults = {
+      globalWeights: averageWeights,
+      evaluatorName: `Toplu Ortalama (${selectedEvaluations.length} değerlendirme)`,
+      date: new Date().toISOString(),
+      isOverallConsistent: true
+    }
+
+    localStorage.setItem("ahpResults", JSON.stringify(avgResults))
+    alert("Ortalama ağırlıklar TOPSIS için kaydedildi!")
+  }
+
+  const handleExportToExcel = useCallback(() => {
+    if (Object.keys(averageWeights).length === 0) {
+      setError("Dışa aktarılacak ortalama ağırlık bulunamadı.")
+      return
+    }
+
+    const dataToExport = Object.entries(averageWeights)
       .sort(([idA], [idB]) => getCriterionDisplayName(idA).localeCompare(getCriterionDisplayName(idB)))
       .map(([id, weight]) => ({
         Kriter: getCriterionDisplayName(id),
@@ -76,15 +155,15 @@ export default function AggregateWeightsPage() {
 
     const ws = XLSX.utils.json_to_sheet(dataToExport)
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "AHP Ağırlıkları")
-    XLSX.writeFile(wb, "AHP_Agirliklari.xlsx")
-  }, [ahpResults, getCriterionDisplayName, getCriterionPathNames])
+    XLSX.utils.book_append_sheet(wb, ws, "Toplu AHP Ağırlıkları")
+    XLSX.writeFile(wb, "Toplu_AHP_Agirliklari.xlsx")
+  }, [averageWeights, getCriterionDisplayName, getCriterionPathNames])
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
         <Progress value={50} className="w-1/2" />
-        <p className="ml-4 text-lg">Sonuçlar yükleniyor...</p>
+        <p className="ml-4 text-lg">Değerlendirmeler yükleniyor...</p>
       </div>
     )
   }
@@ -98,8 +177,8 @@ export default function AggregateWeightsPage() {
             <CardDescription className="text-primary-foreground/90">{error}</CardDescription>
           </CardHeader>
           <CardContent className="p-8 text-center">
-            <p className="text-muted-foreground">Lütfen AHP değerlendirmesini tamamladığınızdan emin olun.</p>
-            <Button onClick={() => router.push("/comparison")} className="mt-4">
+            <p className="text-muted-foreground">Lütfen AHP değerlendirmelerinin yüklendiğinden emin olun.</p>
+            <Button onClick={() => router.push("/hierarchical-comparison")} className="mt-4">
               AHP Ölçme Aracına Git
             </Button>
           </CardContent>
@@ -108,113 +187,163 @@ export default function AggregateWeightsPage() {
     )
   }
 
-  if (!ahpResults) {
-    return null // Should not happen due to error handling above, but for type safety
-  }
-
-  const sortedLeafWeights = Object.entries(ahpResults.leafCriteriaWeights || {})
-    .sort(([, weightA], [, weightB]) => weightB - weightA) // Sort by weight descending
-    .map(([id, weight]) => ({
-      id,
-      name: getCriterionDisplayName(id),
-      path: getCriterionPathNames(id),
-      weight,
-    }))
-
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
       <Card className="card-shadow overflow-hidden border-0">
-        <CardHeader className="bg-gradient-to-r from-primary/90 to-primary text-primary-foreground py-8">
-          <CardTitle className="text-2xl font-bold">Toplu Kriter Ağırlıkları</CardTitle>
+        <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-primary-foreground py-8">
+          <CardTitle className="text-2xl font-bold flex items-center gap-2">
+            <Users className="h-6 w-6" />
+            Toplu AHP Ağırlıkları
+          </CardTitle>
           <CardDescription className="text-primary-foreground/90">
-            AHP analizi sonucunda hesaplanan tüm yaprak kriterlerin nihai ağırlıkları.
+            Farklı değerlendiricilerin AHP ağırlıklarını yönetin ve ortalamalarını hesaplayın.
           </CardDescription>
         </CardHeader>
+        
         <CardContent className="p-8">
-          <div className="mb-6 flex items-center justify-between">
-            <div className="text-lg font-semibold">
-              Değerlendirmeyi Yapan: <span className="font-normal">{ahpResults.evaluatorName}</span>
-            </div>
-            <Button onClick={handleExportToExcel} className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              Excel'e Aktar
-            </Button>
-          </div>
-
-          <Separator className="my-6" />
-
-          <h3 className="text-xl font-semibold mb-4">Yaprak Kriter Ağırlıkları</h3>
-          <div className="space-y-4">
-            {sortedLeafWeights.map((criterion) => (
-              <div key={criterion.id} className="flex items-center gap-4">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex-1">
-                        <span className="font-medium">{criterion.name}</span>
-                        <span className="text-sm text-muted-foreground ml-2">({criterion.path})</span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{criterion.path}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <div className="w-48">
-                  <Progress value={criterion.weight * 100} className="h-2" />
-                </div>
-                <div className="font-semibold text-right w-16">{(criterion.weight * 100).toFixed(2)}%</div>
+          {/* Değerlendirme Listesi */}
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">AHP Değerlendirmeleri ({evaluations.length})</h3>
+              <div className="flex gap-2">
+                <Button onClick={() => handleSelectAll(true)} variant="outline" size="sm">
+                  Tümünü Seç
+                </Button>
+                <Button onClick={() => handleSelectAll(false)} variant="outline" size="sm">
+                  Seçimi Temizle
+                </Button>
               </div>
-            ))}
+            </div>
+            
+            {evaluations.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Info className="h-12 w-12 text-gray-400 mb-4 mx-auto" />
+                  <h3 className="text-lg font-semibold text-gray-600 mb-2">Henüz AHP Değerlendirmesi Yok</h3>
+                  <p className="text-gray-500 mb-4">
+                    AHP ağırlıklarını hesaplamak için önce değerlendirme yapın.
+                  </p>
+                  <Button onClick={() => router.push("/hierarchical-comparison")}>
+                    AHP Değerlendirmesi Yap
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">Seç</TableHead>
+                    <TableHead>Değerlendirici</TableHead>
+                    <TableHead>Tarih</TableHead>
+                    <TableHead>Tutarlılık (CR)</TableHead>
+                    <TableHead>Tutarlı mı?</TableHead>
+                    <TableHead className="w-16">İşlem</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {evaluations.map(evaluation => (
+                    <TableRow key={evaluation.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedEvaluations.includes(evaluation.id)}
+                          onCheckedChange={(checked) => handleEvaluationToggle(evaluation.id, checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{evaluation.evaluatorName}</TableCell>
+                      <TableCell>{new Date(evaluation.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{(evaluation.mainCR * 100).toFixed(2)}%</TableCell>
+                      <TableCell>
+                        {evaluation.isOverallConsistent ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <span className="text-red-600">Tutarsız</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteEvaluation(evaluation.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </div>
 
-          <Separator className="my-6" />
+          <Separator className="my-8" />
 
-          <h3 className="text-xl font-semibold mb-4">Tutarlılık Oranları (CR)</h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Kriter Seviyesi</TableHead>
-                <TableHead className="text-right">Tutarlılık Oranı (CR)</TableHead>
-                <TableHead className="text-right">Durum</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Object.entries(ahpResults.consistencyRatios || {}).map(([levelId, cr]) => {
-                const isConsistent = cr < 0.1
-                const levelName = criteriaHierarchy[levelId]?.name || "Ana Kriterler"
-                return (
-                  <TableRow key={levelId}>
-                    <TableCell className="font-medium">{levelName}</TableCell>
-                    <TableCell className="text-right">{(cr * 100).toFixed(2)}%</TableCell>
-                    <TableCell className="text-right">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          isConsistent
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                        }`}
-                      >
-                        {isConsistent ? (
-                          <>
-                            <CheckCircle className="h-3 w-3 mr-1" /> Tutarlı
-                          </>
-                        ) : (
-                          <>
-                            <Info className="h-3 w-3 mr-1" /> Tutarsız
-                          </>
-                        )}
-                      </span>
-                    </TableCell>
+          {/* Ortalama Ağırlıklar */}
+          {selectedEvaluations.length > 0 && Object.keys(averageWeights).length > 0 && (
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">
+                  Ortalama Kriter Ağırlıkları ({selectedEvaluations.length} değerlendirme)
+                </h3>
+                <div className="flex gap-2">
+                  <Button onClick={handleSaveAverageWeights} className="bg-green-600 hover:bg-green-700">
+                    TOPSIS için Kaydet
+                  </Button>
+                  <Button onClick={handleExportToExcel} variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Excel'e Aktar
+                  </Button>
+                </div>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Kriter</TableHead>
+                    <TableHead>Kriter Yolu</TableHead>
+                    <TableHead className="text-right">Ağırlık</TableHead>
+                    <TableHead className="text-right">Ağırlık (%)</TableHead>
+                    <TableHead className="w-32">Görsel</TableHead>
                   </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-          <p className="text-sm text-muted-foreground mt-4">
-            Tutarlılık Oranı (CR) 0.10'dan küçük veya eşit olmalıdır. Daha yüksek bir değer, karşılaştırmalarınızda
-            tutarsızlık olduğunu gösterir.
-          </p>
+                </TableHeader>
+                <TableBody>
+                  {Object.entries(averageWeights)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([criterionId, weight]) => (
+                      <TableRow key={criterionId}>
+                        <TableCell className="font-medium">
+                          {getCriterionDisplayName(criterionId)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {getCriterionPathNames(criterionId)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {weight.toFixed(4)}
+                        </TableCell>
+                        <TableCell className="text-right font-bold">
+                          {(weight * 100).toFixed(2)}%
+                        </TableCell>
+                        <TableCell>
+                          <Progress 
+                            value={weight * 100} 
+                            className="h-2" 
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {selectedEvaluations.length === 0 && (
+            <div className="text-center py-8">
+              <Info className="h-12 w-12 text-gray-400 mb-4 mx-auto" />
+              <p className="text-gray-500">
+                Ortalama ağırlıkları görmek için değerlendirme seçin.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
