@@ -13,6 +13,7 @@ import { criteriaHierarchy, getCriteriaDescriptions, initializeHierarchyData } f
 import type { JSX } from "react/jsx-runtime"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { useLocalStorage, useLocalStorageItem } from "@/hooks/use-local-storage"
 
 // Saaty scale values and their corresponding numeric values
 const saatyValues = [
@@ -47,12 +48,15 @@ export default function ComparisonPage() {
   const [expandedSections, setExpandedSections] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [evaluatorName, setEvaluatorName] = useState("")
   const [showNameInput, setShowNameInput] = useState(true)
   const [progress, setProgress] = useState(0)
   const [totalComparisons, setTotalComparisons] = useState(0)
   const [completedComparisons, setCompletedComparisons] = useState(0)
   const [criteriaDescriptions] = useState(getCriteriaDescriptions())
+
+  // localStorage hooks
+  const [evaluatorName, setEvaluatorName] = useLocalStorage("evaluatorName", "")
+  const { removeItem: removeComparisonData } = useLocalStorageItem("hierarchicalComparisonData")
 
   // Kullanıcı adı giriş formu
   if (showNameInput) {
@@ -69,9 +73,6 @@ export default function ComparisonPage() {
             <form onSubmit={(e) => {
               e.preventDefault()
               if (evaluatorName.trim()) {
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem("evaluatorName", evaluatorName.trim())
-                }
                 setShowNameInput(false)
               }
             }}>
@@ -97,24 +98,12 @@ export default function ComparisonPage() {
     )
   }
 
-  // İlk yükleme ve kullanıcı adı kontrolü
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    // Load evaluator name
-    const storedName = localStorage.getItem("evaluatorName")
-    if (storedName) {
-      setEvaluatorName(storedName)
-    }
-  }, [])
-
   // Karşılaştırma verilerini temizle ve toplam karşılaştırma sayısını hesapla
   useEffect(() => {
-    if (typeof window === 'undefined') return
     if (showNameInput) return // Kullanıcı adı girilmediyse işlem yapma
 
     // Önceki karşılaştırma verilerini temizle
-    localStorage.removeItem("hierarchicalComparisonData")
+    removeComparisonData()
 
     // Calculate total number of comparisons needed
     let total = 0
@@ -143,7 +132,7 @@ export default function ComparisonPage() {
 
     setTotalComparisons(total)
     setCompletedComparisons(0)
-  }, [showNameInput, hierarchyData])
+  }, [showNameInput, hierarchyData, removeComparisonData])
 
   useEffect(() => {
     // Update progress when completed comparisons change

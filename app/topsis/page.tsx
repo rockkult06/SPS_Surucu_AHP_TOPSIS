@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from 'next/navigation'
 import { calculateAHP } from '../../lib/ahp'
+import { useLocalStorage, useLocalStorageItem } from "@/hooks/use-local-storage"
 
 export default function TOPSISPage() {
   const [driversData, setDriversData] = useState<DriverData[]>([])
@@ -37,25 +38,40 @@ export default function TOPSISPage() {
   const [selectedEvaluations, setSelectedEvaluations] = useState<string[]>([])
   const { toast } = useToast()
   const router = useRouter()
+  const [evaluatorName, setEvaluatorName] = useLocalStorage("evaluatorName", "")
+  const { getItem: getAhpEvaluations } = useLocalStorageItem("ahpEvaluations")
+  const { getItem: getHierarchicalEvaluations } = useLocalStorageItem("hierarchicalEvaluations")
 
   const leafCriteria = useMemo(() => getLeafCriteria(), [])
   const excelColumnMappings = useMemo(() => getExcelColumnMappings(), [])
 
-  // AHP değerlendirmelerini yükle
+  // Load evaluations
   useEffect(() => {
-    const loadEvaluations = async () => {
+    const ahpEvaluations = getAhpEvaluations()
+    const hierarchicalEvaluations = getHierarchicalEvaluations()
+
+    const allEvaluations = []
+
+    if (ahpEvaluations) {
       try {
-        const response = await fetch('/api/ahp-evaluations')
-        if (response.ok) {
-          const data = await response.json()
-          setEvaluations(data.evaluations || [])
-        }
-      } catch (error) {
-        console.error('AHP değerlendirmeleri yüklenirken hata:', error)
+        const parsed = JSON.parse(ahpEvaluations)
+        allEvaluations.push(...parsed)
+      } catch (e) {
+        console.error("Error parsing AHP evaluations:", e)
       }
     }
-    loadEvaluations()
-  }, [])
+
+    if (hierarchicalEvaluations) {
+      try {
+        const parsed = JSON.parse(hierarchicalEvaluations)
+        allEvaluations.push(...parsed)
+      } catch (e) {
+        console.error("Error parsing hierarchical evaluations:", e)
+      }
+    }
+
+    setEvaluations(allEvaluations)
+  }, [getAhpEvaluations, getHierarchicalEvaluations])
 
   // Seçilen değerlendirmelerin ortalama ağırlıklarını hesapla
   useEffect(() => {

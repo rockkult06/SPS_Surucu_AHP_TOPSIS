@@ -16,6 +16,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { initializeHierarchyData, getCriteriaDescriptions } from "@/lib/criteria-hierarchy"
 import { calculateHierarchicalAHP } from "@/lib/ahp"
 import type { JSX } from "react"
+import { useLocalStorage, useLocalStorageItem } from "@/hooks/use-local-storage"
 
 // Saaty scale values and their corresponding numeric values
 const saatyValues = [
@@ -65,94 +66,56 @@ const criteriaIcons: Record<string, JSX.Element> = {
 
 export default function HierarchicalComparisonPage() {
   const router = useRouter()
-  const [hierarchyData, setHierarchyData] = useState<any>(null)
-  const [sliderPositions, setSliderPositions] = useState<Record<string, Record<string, number>>>({})
+  const [hierarchyData, setHierarchyData] = useState(initializeHierarchyData())
+  const [sliderPositions, setSliderPositions] = useState<Record<string, number>>({})
+  const [expandedSections, setExpandedSections] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [evaluatorName, setEvaluatorName] = useState("")
   const [showNameInput, setShowNameInput] = useState(true)
-  const [activeTab, setActiveTab] = useState("main")
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
-  const [results, setResults] = useState<any>(null)
+  const [progress, setProgress] = useState(0)
+  const [totalComparisons, setTotalComparisons] = useState(0)
+  const [completedComparisons, setCompletedComparisons] = useState(0)
   const [criteriaDescriptions] = useState(getCriteriaDescriptions())
 
-  // Yeni değerlendirme başlatma fonksiyonu
-  const startNewEvaluation = useCallback(() => {
-    // Tüm karşılaştırma verilerini temizle
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem("hierarchicalComparisonData")
-    }
-    
-    // Hierarchy data'yı yeniden başlat
-    const freshHierarchyData = initializeHierarchyData()
-    setHierarchyData(freshHierarchyData)
-    
-    // Slider pozisyonlarını temizle
-    const freshSliderPositions: Record<string, Record<string, number>> = {
-      mainCriteria: {},
-      subCriteria: {},
-      subSubCriteria: {},
-    }
-    setSliderPositions(freshSliderPositions)
-    
-    // Genişletilmiş grupları temizle
-    setExpandedGroups({})
-    
-    // Ana tab'a dön
-    setActiveTab("main")
-    
-    // Hataları temizle
-    setError(null)
-    setResults(null)
-    
-    console.log("Yeni değerlendirme başlatıldı - tüm veriler temizlendi")
-  }, [])
+  // localStorage hooks
+  const [evaluatorName, setEvaluatorName] = useLocalStorage("evaluatorName", "")
+  const { removeItem: removeComparisonData } = useLocalStorageItem("hierarchicalComparisonData")
 
-  // İlk yükleme ve kullanıcı adı kontrolü
+  // Karşılaştırma verilerini temizle ve toplam karşılaştırma sayısını hesapla
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (showNameInput) return // Kullanıcı adı girilmediyse işlem yapma
 
-    // Load evaluator name
-    const storedName = localStorage.getItem("evaluatorName")
-    if (storedName) {
-      setEvaluatorName(storedName)
-    }
-  }, [])
+    // Önceki karşılaştırma verilerini temizle
+    removeComparisonData()
 
-  // Mevcut değerlendirme kontrolü
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (showNameInput) return // Kullanıcı adı girilmediyse kontrol etme
+    // Calculate total number of comparisons needed
+    let total = 0
 
-    const hasExistingData = localStorage.getItem("hierarchicalComparisonData")
-    if (!hasExistingData) {
-      startNewEvaluation()
-      return
-    }
+    // Main criteria comparisons
+    const mainSize = hierarchyData.mainCriteria.ids.length
+    total += (mainSize * (mainSize - 1)) / 2
 
-    try {
-      const data = JSON.parse(hasExistingData)
-      if (data.hierarchyData && data.sliderPositions) {
-        const shouldContinue = confirm(
-          "Devam eden bir AHP değerlendirmesi bulundu. " +
-          "Devam etmek ister misiniz?\n\n" +
-          "• TAMAM: Kaldığınız yerden devam edin\n" +
-          "• İPTAL: Yeni değerlendirme başlatın"
-        )
-        
-        if (!shouldContinue) {
-          startNewEvaluation()
-          return
-        }
+    // Sub-criteria comparisons
+    Object.values(hierarchyData.subCriteria).forEach((level) => {
+      const size = level.ids.length
+      total += (size * (size - 1)) / 2
+    })
 
-        setHierarchyData(data.hierarchyData)
-        setSliderPositions(data.sliderPositions)
-      }
-    } catch (e) {
-      console.error("Error loading saved comparison data:", e)
-      startNewEvaluation()
-    }
-  }, [showNameInput, startNewEvaluation])
+    // Sub-sub-criteria comparisons
+    Object.values(hierarchyData.subSubCriteria).forEach((level) => {
+      const size = level.ids.length
+      total += (size * (size - 1)) / 2
+    })
+
+    // Sub-sub-sub-criteria comparisons
+    Object.values(hierarchyData.subSubSubCriteria || {}).forEach((level) => {
+      const size = level.ids.length
+      total += (size * (size - 1)) / 2
+    })
+
+    setTotalComparisons(total)
+    setCompletedComparisons(0)
+  }, [showNameInput, hierarchyData, removeComparisonData])
 
   // Kullanıcı adı giriş formu
   if (showNameInput) {
@@ -160,7 +123,7 @@ export default function HierarchicalComparisonPage() {
       <div className="container mx-auto px-4 py-8 max-w-lg">
         <Card className="card-shadow overflow-hidden border-0">
           <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-primary-foreground py-8">
-            <CardTitle className="text-2xl font-bold">Hiyerarşik AHP Değerlendirmesi</CardTitle>
+            <CardTitle className="text-2xl font-bold">AHP Değerlendirmesi</CardTitle>
             <CardDescription className="text-primary-foreground/90">
               Lütfen değerlendirmeyi yapmak için adınızı girin.
             </CardDescription>
@@ -169,9 +132,6 @@ export default function HierarchicalComparisonPage() {
             <form onSubmit={(e) => {
               e.preventDefault()
               if (evaluatorName.trim()) {
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem("evaluatorName", evaluatorName.trim())
-                }
                 setShowNameInput(false)
               }
             }}>
@@ -245,7 +205,7 @@ export default function HierarchicalComparisonPage() {
     saveComparisonData(newHierarchyData, newSliderPositions)
   }
 
-  const saveComparisonData = (data: any, positions: Record<string, Record<string, number>>) => {
+  const saveComparisonData = (data: any, positions: Record<string, number>) => {
     localStorage.setItem(
       "hierarchicalComparisonData",
       JSON.stringify({
@@ -348,7 +308,6 @@ export default function HierarchicalComparisonPage() {
           setError(
             `Lütfen tüm ana kriter karşılaştırmalarını tamamlayın: ${hierarchyData.mainCriteria.names[i]} ve ${hierarchyData.mainCriteria.names[j]} arasındaki karşılaştırma eksik.`,
           )
-          setActiveTab("main")
           return false
         }
       }
@@ -367,7 +326,6 @@ export default function HierarchicalComparisonPage() {
               setError(
                 `Lütfen tüm "${parentName}" alt kriter karşılaştırmalarını tamamlayın: ${hierarchyData.subCriteria[parentId].names[i]} ve ${hierarchyData.subCriteria[parentId].names[j]} arasındaki karşılaştırma eksik.`,
               )
-              setActiveTab("sub") // Set to sub tab for general sub-criteria issues
               return false
             }
           }
@@ -388,7 +346,6 @@ export default function HierarchicalComparisonPage() {
               setError(
                 `Lütfen tüm "${parentName}" alt kriter karşılaştırmalarını tamamlayın: ${hierarchyData.subSubCriteria[parentId].names[i]} ve ${hierarchyData.subSubCriteria[parentId].names[j]} arasındaki karşılaştırma eksik.`,
               )
-              setActiveTab("sub") // Set to sub tab for general sub-criteria issues
               return false
             }
           }
@@ -621,7 +578,6 @@ export default function HierarchicalComparisonPage() {
                       value={evaluatorName}
                       onChange={(e) => {
                         setEvaluatorName(e.target.value)
-                        localStorage.setItem("evaluatorName", e.target.value)
                       }}
                       placeholder="Adınızı girin"
                       className="max-w-sm"
@@ -634,7 +590,7 @@ export default function HierarchicalComparisonPage() {
                         "Bu işlem mevcut tüm karşılaştırma verilerini silecektir."
                       )
                       if (confirmed) {
-                        startNewEvaluation()
+                        removeComparisonData()
                       }
                     }}
                     variant="outline"
@@ -645,13 +601,10 @@ export default function HierarchicalComparisonPage() {
                 </div>
               </div>
 
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <Tabs value="main" className="w-full">
                 <TabsList className="grid grid-cols-2 mb-6">
                   <TabsTrigger value="main" className="text-base py-3">
                     Ana Kriterler
-                  </TabsTrigger>
-                  <TabsTrigger value="sub" className="text-base py-3">
-                    Alt Kriterler
                   </TabsTrigger>
                 </TabsList>
 
@@ -665,97 +618,6 @@ export default function HierarchicalComparisonPage() {
                       hierarchyData.mainCriteria.names,
                     )}
                   </div>
-                </TabsContent>
-
-                <TabsContent value="sub" className="space-y-6">
-                  <h2 className="text-xl font-semibold mb-4">Alt Kriter Karşılaştırmaları</h2>
-                  <Accordion
-                    type="multiple"
-                    className="w-full"
-                    value={Object.keys(expandedGroups).filter((key) => expandedGroups[key])}
-                    onValueChange={(values) => {
-                      const newExpandedGroups: Record<string, boolean> = {}
-                      values.forEach((val) => (newExpandedGroups[val] = true))
-                      setExpandedGroups(newExpandedGroups)
-                    }}
-                  >
-                    {hierarchyData.mainCriteria.ids.map((mainId: string) => {
-                      const currentSubCriteriaIds = hierarchyData.subCriteria[mainId]?.ids || []
-                      const currentSubCriteriaNames = hierarchyData.subCriteria[mainId]?.names || []
-
-                      if (currentSubCriteriaIds.length === 0) return null // Skip if no sub-criteria
-
-                      return (
-                        <AccordionItem
-                          key={mainId}
-                          value={mainId}
-                          className="border rounded-xl mb-4 overflow-hidden shadow-sm"
-                        >
-                          <AccordionTrigger className="px-6 py-4 text-lg font-medium bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            {hierarchyData.criteriaMap[mainId].name} Alt Kriterleri
-                          </AccordionTrigger>
-                          <AccordionContent className="p-6 bg-card">
-                            {currentSubCriteriaIds.length > 1 ? (
-                              <>
-                                <h3 className="text-lg font-semibold mb-4">
-                                  {hierarchyData.criteriaMap[mainId].name} Alt Kriter Karşılaştırması
-                                </h3>
-                                {renderComparisons(
-                                  "subCriteria",
-                                  mainId,
-                                  currentSubCriteriaIds,
-                                  currentSubCriteriaNames,
-                                )}
-                              </>
-                            ) : (
-                              <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-900/30">
-                                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                <AlertDescription className="text-blue-800 dark:text-blue-200">
-                                  Bu ana kriterin tek bir alt kriteri bulunmaktadır. Karşılaştırma yapılmasına gerek
-                                  yoktur.
-                                </AlertDescription>
-                              </Alert>
-                            )}
-
-                            {/* Render sub-sub-criteria if they exist for any of the current sub-criteria */}
-                            {currentSubCriteriaIds.map((subId: string) => {
-                              const currentSubSubCriteriaIds = hierarchyData.subSubCriteria[subId]?.ids || []
-                              const currentSubSubCriteriaNames = hierarchyData.subSubCriteria[subId]?.names || []
-
-                              if (currentSubSubCriteriaIds.length === 0) return null
-
-                              return (
-                                <div
-                                  key={`sub-sub-${subId}`}
-                                  className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700"
-                                >
-                                  <h3 className="text-lg font-semibold mb-4">
-                                    {hierarchyData.criteriaMap[subId].name} Alt Kriterlerinin Alt Kriterleri
-                                  </h3>
-                                  {currentSubSubCriteriaIds.length > 1 ? (
-                                    renderComparisons(
-                                      "subSubCriteria",
-                                      subId,
-                                      currentSubSubCriteriaIds,
-                                      currentSubSubCriteriaNames,
-                                    )
-                                  ) : (
-                                    <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-900/30">
-                                      <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                      <AlertDescription className="text-blue-800 dark:text-blue-200">
-                                        Bu alt kriterin tek bir alt kriteri bulunmaktadır. Karşılaştırma yapılmasına
-                                        gerek yoktur.
-                                      </AlertDescription>
-                                    </Alert>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </AccordionContent>
-                        </AccordionItem>
-                      )
-                    })}
-                  </Accordion>
                 </TabsContent>
               </Tabs>
 
